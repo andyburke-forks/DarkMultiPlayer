@@ -9,11 +9,9 @@ namespace DarkMultiPlayer
     {
         private static string savesFolder = Path.Combine(Client.dmpClient.kspRootPath, "saves");
         //Services
-        private Settings dmpSettings;
 
-        public UniverseConverter(Settings dmpSettings)
+        public UniverseConverter()
         {
-            this.dmpSettings = dmpSettings;
         }
 
         public void GenerateUniverse(string saveName)
@@ -45,7 +43,7 @@ namespace DarkMultiPlayer
             Directory.CreateDirectory(vesselFolder);
             string scenarioFolder = Path.Combine(universeFolder, "Scenarios");
             Directory.CreateDirectory(scenarioFolder);
-            string playerScenarioFolder = Path.Combine(scenarioFolder, dmpSettings.playerName);
+            string playerScenarioFolder = Path.Combine(scenarioFolder, Settings.singleton.playerName);
             Directory.CreateDirectory(playerScenarioFolder);
             string kerbalFolder = Path.Combine(universeFolder, "Kerbals");
             Directory.CreateDirectory(kerbalFolder);

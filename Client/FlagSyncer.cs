@@ -19,14 +19,12 @@ namespace DarkMultiPlayer
         private Queue<FlagRespondMessage> newFlags = new Queue<FlagRespondMessage>();
         //Services
         private DMPGame dmpGame;
-        private Settings dmpSettings;
         private NetworkWorker networkWorker;
         private NamedAction updateAction;
 
-        public FlagSyncer(DMPGame dmpGame, Settings dmpSettings, NetworkWorker networkWorker)
+        public FlagSyncer(DMPGame dmpGame, NetworkWorker networkWorker)
         {
             this.dmpGame = dmpGame;
-            this.dmpSettings = dmpSettings;
             this.networkWorker = networkWorker;
             flagPath = Path.Combine(Path.Combine(Client.dmpClient.gameDataDir, "DarkMultiPlayer"), "Flags");
             updateAction = new NamedAction(Update);
@@ -45,7 +43,7 @@ namespace DarkMultiPlayer
             using (MessageWriter mw = new MessageWriter())
             {
                 mw.Write<int>((int)FlagMessageType.LIST);
-                mw.Write<string>(dmpSettings.playerName);
+                mw.Write<string>(Settings.singleton.playerName);
                 mw.Write<string[]>(dmpFlags);
                 mw.Write<string[]>(dmpSha);
                 networkWorker.SendFlagMessage(mw.GetMessageBytes());
@@ -140,7 +138,7 @@ namespace DarkMultiPlayer
                 return;
             }
             string flagName = flagURL.Substring("DarkMultiPlayer/Flags/".Length);
-            if (serverFlags.ContainsKey(flagName) && serverFlags[flagName].owner != dmpSettings.playerName)
+            if (serverFlags.ContainsKey(flagName) && serverFlags[flagName].owner != Settings.singleton.playerName)
             {
                 //If the flag is owned by someone else don't sync it
                 return;
@@ -168,13 +166,13 @@ namespace DarkMultiPlayer
                 using (MessageWriter mw = new MessageWriter())
                 {
                     mw.Write<int>((int)FlagMessageType.UPLOAD_FILE);
-                    mw.Write<string>(dmpSettings.playerName);
+                    mw.Write<string>(Settings.singleton.playerName);
                     mw.Write<string>(Path.GetFileName(flagFile));
                     mw.Write<byte[]>(File.ReadAllBytes(flagFile));
                     networkWorker.SendFlagMessage(mw.GetMessageBytes());
                 }
                 FlagInfo fi = new FlagInfo();
-                fi.owner = dmpSettings.playerName;
+                fi.owner = Settings.singleton.playerName;
                 fi.shaSum = Common.CalculateSHA256Hash(flagFile);
                 serverFlags[flagName] = fi;
             }

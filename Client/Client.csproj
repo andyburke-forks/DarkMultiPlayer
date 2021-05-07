@@ -96,13 +96,7 @@
     <Compile Include="ScenarioWorker.cs" />
     <Compile Include="DebugWindow.cs" />
     <Compile Include="DynamicTickWorker.cs" />
-    <Compile Include="ModWorker.cs" />
-    <Compile Include="ModWindow.cs" />
-    <Compile Include="CraftLibraryWorker.cs" />
-    <Compile Include="ChatWorker.cs" />
     <Compile Include="UniverseSyncCache.cs" />
-    <Compile Include="ScreenshotWorker.cs" />
-    <Compile Include="LockSystem.cs" />
     <Compile Include="AsteroidWorker.cs" />
     <Compile Include="PlayerColorWorker.cs" />
     <Compile Include="OptionsWindow.cs" />
@@ -113,7 +107,6 @@
     <Compile Include="DisclaimerWindow.cs" />
     <Compile Include="DMPModInterface.cs" />
     <Compile Include="Profiler.cs" />
-    <Compile Include="AdminSystem.cs" />
     <Compile Include="VesselUpdate.cs" />
     <Compile Include="VesselUtil.cs" />
     <Compile Include="VesselProtoUpdate.cs" />
@@ -124,20 +117,11 @@
     <Compile Include="PartKiller.cs" />
     <Compile Include="KerbalReassigner.cs" />
     <Compile Include="DMPGame.cs" />
-    <Compile Include="VesselRecorder.cs" />
     <Compile Include="PosistionStatistics.cs" />
     <Compile Include="VesselCtrlUpdate.cs" />
     <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="SafetyBubble.cs" />
-    <Compile Include="Groups.cs" />
-    <Compile Include="Permissions.cs" />
-    <Compile Include="GroupsWindow.cs" />
-    <Compile Include="PermissionsWindow.cs" />
-    <Compile Include="ModpackWorker.cs" />
     <Compile Include="RecycledMessageTypes.cs" />
-    <Compile Include="ServerListDisclaimerWindow.cs" />
-    <Compile Include="ServersWindow.cs" />
-    <Compile Include="ServerListConnection.cs" />
+    <Compile Include="Store.cs" />
     <Compile Include="VesselRangeBumper.cs" />
   </ItemGroup>
   <ItemGroup>

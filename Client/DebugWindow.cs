@@ -19,7 +19,6 @@ namespace DarkMultiPlayer
         private bool displayConnectionQueue;
         private bool displayDynamicTickStats;
         private bool displayRequestedRates;
-        private bool displayVesselRecorder;
         private bool displayVesselTimeDelay;
         private bool displayMeshStats;
         private bool displayVesselCache;
@@ -47,29 +46,25 @@ namespace DarkMultiPlayer
         private const float DISPLAY_UPDATE_INTERVAL = .2f;
         //Services
         private DMPGame dmpGame;
-        private Settings dmpSettings;
         private TimeSyncer timeSyncer;
         private NetworkWorker networkWorker;
         private VesselWorker vesselWorker;
         private DynamicTickWorker dynamicTickWorker;
         private WarpWorker warpWorker;
-        private VesselRecorder vesselRecorder;
         private PosistionStatistics posistionStatistics;
         private OptionsWindow optionsWindow;
         private Profiler profiler;
         private NamedAction updateAction;
         private NamedAction drawAction;
 
-        public DebugWindow(DMPGame dmpGame, Settings dmpSettings, TimeSyncer timeSyncer, NetworkWorker networkWorker, VesselWorker vesselWorker, DynamicTickWorker dynamicTickWorker, WarpWorker warpWorker, VesselRecorder vesselRecorder, PosistionStatistics posistionStatistics, OptionsWindow optionsWindow, Profiler profiler)
+        public DebugWindow(DMPGame dmpGame, TimeSyncer timeSyncer, NetworkWorker networkWorker, VesselWorker vesselWorker, DynamicTickWorker dynamicTickWorker, WarpWorker warpWorker, PosistionStatistics posistionStatistics, OptionsWindow optionsWindow, Profiler profiler)
         {
             this.dmpGame = dmpGame;
-            this.dmpSettings = dmpSettings;
             this.timeSyncer = timeSyncer;
             this.networkWorker = networkWorker;
             this.vesselWorker = vesselWorker;
             this.dynamicTickWorker = dynamicTickWorker;
             this.warpWorker = warpWorker;
-            this.vesselRecorder = vesselRecorder;
             this.posistionStatistics = posistionStatistics;
             this.optionsWindow = optionsWindow;
             this.profiler = profiler;
@@ -146,32 +141,7 @@ namespace DarkMultiPlayer
                 GUILayout.Label(requestedRateText, labelStyle);
             }
             profiler.samplingEnabled = GUILayout.Toggle(profiler.samplingEnabled, "Record Profiler Samples", buttonStyle);
-            displayVesselRecorder = GUILayout.Toggle(displayVesselRecorder, "Display Vessel Recorder", buttonStyle);
-            if (displayVesselRecorder)
-            {
-                if (!vesselRecorder.active)
-                {
-                    if (GUILayout.Button("Start Recording", buttonStyle))
-                    {
-                        vesselRecorder.StartRecord();
-                    }
-                    if (GUILayout.Button("Playback", buttonStyle))
-                    {
-                        vesselRecorder.StartPlayback();
-                    }
-                }
-                else
-                {
-                    if (GUILayout.Button("Stop Recording", buttonStyle))
-                    {
-                        vesselRecorder.StopRecord();
-                    }
-                    if (GUILayout.Button("Cancel Recording", buttonStyle))
-                    {
-                        vesselRecorder.CancelRecord();
-                    }
-                }
-            }
+
             posistionStatistics.active = GUILayout.Toggle(posistionStatistics.active, "Display Posistional Error", buttonStyle);
             if (posistionStatistics.active)
             {
@@ -360,7 +330,7 @@ namespace DarkMultiPlayer
                     //Requested rates text
                     if (displayRequestedRates)
                     {
-                        requestedRateText = dmpSettings.playerName + ": " + Math.Round(timeSyncer.requestedRate, 3) + "x.\n";
+                        requestedRateText = Settings.singleton.playerName + ": " + Math.Round(timeSyncer.requestedRate, 3) + "x.\n";
                         foreach (KeyValuePair<string, float> playerEntry in warpWorker.clientSkewList)
                         {
                             requestedRateText += playerEntry.Key + ": " + Math.Round(playerEntry.Value, 3) + "x.\n";

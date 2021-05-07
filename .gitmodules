@@ -10,6 +10,3 @@
 [submodule "External/SettingsParser"]
 	path = External/SettingsParser
 	url = https://github.com/godarklight/SettingsParser.git
-[submodule "External/DMPServerListReporter2"]
-	path = External/DMPServerListReporter2
-	url = https://github.com/godarklight/DMPServerListReporter2.git

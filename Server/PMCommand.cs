@@ -27,8 +27,6 @@ namespace DarkMultiPlayerServer
             }
             if (pmPlayer != null)
             {
-                string messageText = commandArgs.Substring(pmPlayer.playerName.Length + 1);
-                Messages.Chat.SendChatMessageToClient(pmPlayer, messageText);
             }
             else
             {

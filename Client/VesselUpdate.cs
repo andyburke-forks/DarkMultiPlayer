@@ -27,6 +27,9 @@ namespace DarkMultiPlayer
         public bool sasEnabled;
         public int autopilotMode;
         public float[] lockedRotation= new float[4];
+
+        // public int part_states_count = 0;
+        // public List<PartStates> part_states = new List<PartStates>();
         //Private
         private const double STEP_DISTANCE = 0.05;
         private VesselWorker vesselWorker;
@@ -61,6 +64,8 @@ namespace DarkMultiPlayer
                 actiongroupControls[2] = updateVessel.ActionGroups[KSPActionGroup.Brakes];
                 actiongroupControls[3] = updateVessel.ActionGroups[KSPActionGroup.SAS];
                 actiongroupControls[4] = updateVessel.ActionGroups[KSPActionGroup.RCS];
+
+                // TODO: add all states, like ones from mods?
 
                 if (updateVessel.altitude < 10000)
                 {
@@ -104,6 +109,16 @@ namespace DarkMultiPlayer
                     lockedRotation[2] = updateVessel.Autopilot.SAS.lockedRotation.z;
                     lockedRotation[3] = updateVessel.Autopilot.SAS.lockedRotation.w;
                 }
+
+                // if (updateVessel.parts != null)
+                // {
+                //     part_states.Clear();
+                //     for (int i = 0; i < updateVessel.parts.Count; i++)
+                //     {
+                //         Part part = updateVessel.parts[i];
+                //         part_states.Add( part.State );
+                //     }
+                // }
             }
             catch (Exception e)
             {
@@ -155,9 +170,10 @@ namespace DarkMultiPlayer
             lockedRotation[1] = source.lockedRotation[1];
             lockedRotation[2] = source.lockedRotation[2];
             lockedRotation[3] = source.lockedRotation[3];
+            // part_states = source.part_states;
         }
 
-        public void Apply(PosistionStatistics posistionStatistics, Dictionary<Guid, VesselCtrlUpdate> ctrlUpdate, VesselUpdate previousUpdate, VesselUpdate nextUpdate, Settings dmpSettings)
+        public void Apply(PosistionStatistics posistionStatistics, Dictionary<Guid, VesselCtrlUpdate> ctrlUpdate, VesselUpdate previousUpdate, VesselUpdate nextUpdate)
         {
             if (HighLogic.LoadedScene == GameScenes.LOADING)
             {
@@ -165,10 +181,10 @@ namespace DarkMultiPlayer
             }
 
             //Ignore updates to our own vessel if we are in flight and we aren't spectating
-            if (!vesselWorker.isSpectating && (FlightGlobals.fetch.activeVessel != null ? FlightGlobals.fetch.activeVessel.id == vesselID : false) && HighLogic.LoadedScene == GameScenes.FLIGHT)
-            {
-                return;
-            }
+            // if (!vesselWorker.isSpectating && (FlightGlobals.fetch.activeVessel != null ? FlightGlobals.fetch.activeVessel.id == vesselID : false) && HighLogic.LoadedScene == GameScenes.FLIGHT)
+            // {
+            //     return;
+            // }
             Vessel updateVessel = FlightGlobals.fetch.vessels.FindLast(v => v.id == vesselID);
             if (updateVessel == null)
             {
@@ -183,17 +199,17 @@ namespace DarkMultiPlayer
             }
 
             double interpolatorDelay = 0f;
-            if (dmpSettings.interpolatorType == InterpolatorType.INTERPOLATE1S)
+            if (Settings.singleton.interpolatorType == InterpolatorType.INTERPOLATE1S)
             {
                 interpolatorDelay = 1f;
             }
-            if (dmpSettings.interpolatorType == InterpolatorType.INTERPOLATE3S)
+            if (Settings.singleton.interpolatorType == InterpolatorType.INTERPOLATE3S)
             {
                 interpolatorDelay = 3f;
             }
 
-            bool interpolatorEnabled = dmpSettings.interpolatorType == InterpolatorType.INTERPOLATE1S || dmpSettings.interpolatorType == InterpolatorType.INTERPOLATE3S;
-            bool extrapolatorEnabled = dmpSettings.interpolatorType == InterpolatorType.EXTRAPOLATE;
+            bool interpolatorEnabled = Settings.singleton.interpolatorType == InterpolatorType.INTERPOLATE1S || Settings.singleton.interpolatorType == InterpolatorType.INTERPOLATE3S;
+            bool extrapolatorEnabled = Settings.singleton.interpolatorType == InterpolatorType.EXTRAPOLATE;
             Quaternion normalRotate = Quaternion.identity;
             Vector3 oldPos = updateVessel.GetWorldPos3D();
             Vector3 oldVelocity = updateVessel.orbitDriver.orbit.GetVel();

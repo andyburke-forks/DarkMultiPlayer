@@ -526,7 +526,6 @@ namespace DarkMultiPlayer
             }
             clockOffsetAverage = clockOffsetTotal / clockOffsetEndPos;
 
-
             long networkLatencyTotal = 0;
             int networkLatencyEndPos = clockOffsetPos;
             if (networkLatencyFull)
@@ -551,6 +550,7 @@ namespace DarkMultiPlayer
             //Ask for another time sync if we aren't synced yet.
             if (!synced)
             {
+                DarkLog.Debug("Not synced, trying again...");
                 lastSyncTime = Client.realtimeSinceStartup;
                 networkWorker.SendTimeSync();
             }

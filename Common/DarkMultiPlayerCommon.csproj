@@ -32,11 +32,12 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ByteArray.cs" />
+    <Compile Include="ByteRecycler.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Compression.cs" />
-    <Compile Include="ByteRecycler.cs" />
     <Compile Include="Recycler.cs" />
-    <Compile Include="ByteArray.cs" />
+    <Compile Include="Store.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>

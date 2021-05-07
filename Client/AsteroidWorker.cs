@@ -20,15 +20,13 @@ namespace DarkMultiPlayer
         System.Random random = new System.Random();
         //Services
         private DMPGame dmpGame;
-        private LockSystem lockSystem;
         private NetworkWorker networkWorker;
         private VesselWorker vesselWorker;
         private NamedAction updateAction;
 
-        public AsteroidWorker(DMPGame dmpGame, LockSystem lockSystem, NetworkWorker networkWorker, VesselWorker vesselWorker)
+        public AsteroidWorker(DMPGame dmpGame, NetworkWorker networkWorker, VesselWorker vesselWorker)
         {
             this.dmpGame = dmpGame;
-            this.lockSystem = lockSystem;
             this.networkWorker = networkWorker;
             this.vesselWorker = vesselWorker;
             updateAction = new NamedAction(Update);
@@ -98,64 +96,57 @@ namespace DarkMultiPlayer
                 return;
             }
             lastAsteroidCheck = Client.realtimeSinceStartup;
-
+            
             //Try to acquire the asteroid-spawning lock if nobody else has it.
-            if (!lockSystem.LockExists("asteroid-spawning"))
-            {
-                lockSystem.AcquireLock("asteroid-spawning", false);
+            string result = DarkMultiPlayer.Store.singleton.set( "asteroid-controller", Settings.singleton.playerName );
+            if ( result != Settings.singleton.playerName ) {
+                return;
             }
 
-            //We have the spawn lock, lets do stuff.
-            if (lockSystem.LockIsOurs("asteroid-spawning"))
+            if (HighLogic.LoadedSceneIsFlight && !FlightGlobals.ready)
             {
-                if (HighLogic.LoadedSceneIsFlight && !FlightGlobals.ready)
-                {
-                    return;
-                }
-                if (HighLogic.CurrentGame.flightState.protoVessels == null)
-                {
-                    return;
-                }
-                if (FlightGlobals.fetch.vessels == null)
-                {
-                    return;
-                }
-                if (HighLogic.CurrentGame.flightState.protoVessels.Count == 0)
-                {
-                    return;
-                }
-                if (FlightGlobals.fetch.vessels.Count == 0)
-                {
-                    return;
-                }
-                int beforeSpawn = GetAsteroidCount();
-                if (beforeSpawn <  maxNumberOfUntrackedAsteroids)
-                {
-                    ProtoVessel asty = SpawnAsteroid();
-                    DarkLog.Debug("Spawned asteroid " + asty.vesselName + ", have " + (beforeSpawn) + ", need " + maxNumberOfUntrackedAsteroids);
-                }
+                return;
+            }
+            if (HighLogic.CurrentGame.flightState.protoVessels == null)
+            {
+                return;
+            }
+            if (FlightGlobals.fetch.vessels == null)
+            {
+                return;
+            }
+            if (HighLogic.CurrentGame.flightState.protoVessels.Count == 0)
+            {
+                return;
+            }
+            if (FlightGlobals.fetch.vessels.Count == 0)
+            {
+                return;
+            }
+            int beforeSpawn = GetAsteroidCount();
+            if (beforeSpawn <  maxNumberOfUntrackedAsteroids)
+            {
+                ProtoVessel asty = SpawnAsteroid();
+                DarkLog.Debug("Spawned asteroid " + asty.vesselName + ", have " + (beforeSpawn) + ", need " + maxNumberOfUntrackedAsteroids);
             }
 
             //Check for changes to tracking
-            lock (serverAsteroids)
+            foreach (Vessel asteroid in GetCurrentAsteroids())
             {
-                foreach (Vessel asteroid in GetCurrentAsteroids())
+                if (asteroid.state != Vessel.State.DEAD)
                 {
-                    if (asteroid.state != Vessel.State.DEAD)
+                    if (!serverAsteroidTrackStatus.ContainsKey(asteroid.id))
                     {
-                        if (!serverAsteroidTrackStatus.ContainsKey(asteroid.id))
+                        serverAsteroidTrackStatus.Add(asteroid.id, asteroid.DiscoveryInfo.trackingStatus.Value);
+                    }
+                    else
+                    {
+                        if (asteroid.DiscoveryInfo.trackingStatus.Value != serverAsteroidTrackStatus[asteroid.id])
                         {
-                            serverAsteroidTrackStatus.Add(asteroid.id, asteroid.DiscoveryInfo.trackingStatus.Value);
-                        }
-                        else
-                        {
-                            if (asteroid.DiscoveryInfo.trackingStatus.Value != serverAsteroidTrackStatus[asteroid.id])
-                            {
-                                ProtoVessel pv = asteroid.BackupVessel();
-                                DarkLog.Debug("Sending changed asteroid, new state: " + asteroid.DiscoveryInfo.trackingStatus.Value + "!");
-                                serverAsteroidTrackStatus[asteroid.id] = asteroid.DiscoveryInfo.trackingStatus.Value;
-                                networkWorker.SendVesselProtoMessage(pv, false, false);
-                            }
+                            ProtoVessel pv = asteroid.BackupVessel();
+                            DarkLog.Debug("Sending changed asteroid, new state: " + asteroid.DiscoveryInfo.trackingStatus.Value + "!");
+                            serverAsteroidTrackStatus[asteroid.id] = asteroid.DiscoveryInfo.trackingStatus.Value;
+                            networkWorker.SendVesselProtoMessage(pv, false, false);
                         }
                     }
                 }
@@ -170,29 +161,18 @@ namespace DarkMultiPlayer
                 {
                     lock (serverAsteroids)
                     {
-                        if (lockSystem.LockIsOurs("asteroid-spawning"))
+                        if (!serverAsteroids.Contains(checkVessel.id))
                         {
-                            if (!serverAsteroids.Contains(checkVessel.id))
+                            if (GetAsteroidCount() <= maxNumberOfUntrackedAsteroids)
                             {
-                                if (GetAsteroidCount() <= maxNumberOfUntrackedAsteroids)
-                                {
-                                    DarkLog.Debug("Spawned in new server asteroid!");
-                                    serverAsteroids.Add(checkVessel.id);
-                                    vesselWorker.RegisterServerVessel(checkVessel.id);
-                                    networkWorker.SendVesselProtoMessage(checkVessel.protoVessel, false, false);
-                                }
-                                else
-                                {
-                                    DarkLog.Debug("Killing non-server asteroid " + checkVessel.id);
-                                    checkVessel.Die();
-                                }
+                                DarkLog.Debug("Spawned in new server asteroid!");
+                                serverAsteroids.Add(checkVessel.id);
+                                vesselWorker.RegisterServerVessel(checkVessel.id);
+                                networkWorker.SendVesselProtoMessage(checkVessel.protoVessel, false, false);
                             }
-                        }
-                        else
-                        {
-                            if (!serverAsteroids.Contains(checkVessel.id))
+                            else
                             {
-                                DarkLog.Debug("Killing non-server asteroid " + checkVessel.id + ", we don't own the asteroid-spawning lock");
+                                DarkLog.Debug("Killing non-server asteroid " + checkVessel.id);
                                 checkVessel.Die();
                             }
                         }

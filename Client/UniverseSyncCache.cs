@@ -21,7 +21,6 @@ namespace DarkMultiPlayer
         private Dictionary<string, long> fileLengths = new Dictionary<string, long>();
         private Dictionary<string, DateTime> fileCreationTimes = new Dictionary<string, DateTime>();
         //Services
-        private Settings dmpSettings;
 
         public long currentCacheSize
         {
@@ -29,9 +28,8 @@ namespace DarkMultiPlayer
             private set;
         }
 
-        public UniverseSyncCache(Settings dmpSettings)
+        public UniverseSyncCache()
         {
-            this.dmpSettings = dmpSettings;
             Thread processingThread = new Thread(new ThreadStart(ProcessingThreadMain));
             processingThread.IsBackground = true;
             processingThread.Start();
@@ -114,7 +112,7 @@ namespace DarkMultiPlayer
                 }
             }
             //While the directory is over (cacheSize) MB
-            while (currentCacheSize > (dmpSettings.cacheSize * 1024 * 1024))
+            while (currentCacheSize > (Settings.singleton.cacheSize * 1024 * 1024))
             {
                 string deleteObject = null;
                 //Find oldest file

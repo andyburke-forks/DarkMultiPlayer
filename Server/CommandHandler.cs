@@ -14,23 +14,11 @@ namespace DarkMultiPlayerServer
             {
                 //Register commands
                 CommandHandler.RegisterCommand("help", CommandHandler.DisplayHelp, "Displays this help");
-                CommandHandler.RegisterCommand("say", CommandHandler.Say, "Broadcasts a message to clients");
                 CommandHandler.RegisterCommand("dekessler", Dekessler.RunDekessler, "Clears out debris from the server");
                 CommandHandler.RegisterCommand("nukeksc", NukeKSC.RunNukeKSC, "Clears ALL vessels from KSC and the Runway");
                 CommandHandler.RegisterCommand("listclients", ListClients, "Lists connected clients");
                 CommandHandler.RegisterCommand("countclients", CountClients, "Counts connected clients");
                 CommandHandler.RegisterCommand("connectionstats", ConnectionStats, "Displays network traffic usage");
-                CommandHandler.RegisterCommand("editgroup", Groups.fetch.EditGroupCommand, "Sets the group to edit");
-                CommandHandler.RegisterCommand("addplayer", Groups.fetch.AddPlayerToGroupCommand, "Adds player to group, first player becomes admin");
-                CommandHandler.RegisterCommand("removeplayer", Groups.fetch.RemovePlayerFromGroupCommand, "Removes player from group");
-                CommandHandler.RegisterCommand("addadmin", Groups.fetch.AddPlayerAdminCommand, "Adds admin to group");
-                CommandHandler.RegisterCommand("removeadmin", Groups.fetch.RemovePlayerAdminCommand, "Removes admin from group");
-                CommandHandler.RegisterCommand("showgroups", Groups.fetch.ShowGroupsCommand, "Shows group database");
-                CommandHandler.RegisterCommand("editvessel", Permissions.fetch.EditVesselCommand, "Edits vessel permissions, takes same ID from Universe/Vessels/");
-                CommandHandler.RegisterCommand("vesselowner", Permissions.fetch.SetVesselOwnerCommand, "Sets a vessel owner");
-                CommandHandler.RegisterCommand("vesselgroup", Permissions.fetch.SetVesselGroupCommand, "Sets a vessels group");
-                CommandHandler.RegisterCommand("vesselprotection", Permissions.fetch.SetVesselProtectionCommand, "Sets vessel protection level. Valid levels: public, group, private.");
-                CommandHandler.RegisterCommand("showvessels", Permissions.fetch.ShowVesselsCommand, "Shows vessel protection database");
 
                 //Main loop
                 while (Server.serverRunning)
@@ -134,12 +122,6 @@ namespace DarkMultiPlayerServer
             {
                 DarkLog.Normal(cmd.name.PadRight(longestName) + " - " + cmd.description);
             }
-        }
-
-        private static void Say(string sayText)
-        {
-            DarkLog.Normal("Broadcasting " + sayText);
-            Messages.Chat.SendChatMessageToAll(sayText);
         }
 
         private static void ListClients(string commandArgs)

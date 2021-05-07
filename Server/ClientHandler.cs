@@ -27,8 +27,6 @@ namespace DarkMultiPlayerServer
                 clients = new List<ClientObject>().AsReadOnly();
 
                 Messages.WarpControl.Reset();
-                Messages.Chat.Reset();
-                Messages.ScreenshotLibrary.Reset();
 
                 SetupTCPServer();
 
@@ -39,7 +37,6 @@ namespace DarkMultiPlayerServer
                     {
                         Messages.Heartbeat.CheckHeartBeat(client);
                     }
-                    ModpackSystem.fetch.SendFilesToClients();
                     //Check timers
                     NukeKSC.CheckTimer();
                     Dekessler.CheckTimer();
@@ -521,10 +518,6 @@ namespace DarkMultiPlayerServer
                 if (client.connectionStatus != ConnectionStatus.DISCONNECTED)
                 {
                     DMPPluginHandler.FireOnClientDisconnect(client);
-                    if (client.playerName != null)
-                    {
-                        Messages.Chat.RemovePlayer(client.playerName);
-                    }
                     client.connectionStatus = ConnectionStatus.DISCONNECTED;
                     if (client.authenticated)
                     {
@@ -536,7 +529,6 @@ namespace DarkMultiPlayerServer
                             newMessage.data = mw.GetMessageBytes();
                         }
                         SendToAll(client, newMessage, true);
-                        LockSystem.fetch.ReleasePlayerLocks(client.playerName);
                     }
                     try
                     {
@@ -588,17 +580,11 @@ namespace DarkMultiPlayerServer
                 case ClientMessageType.HANDSHAKE_RESPONSE:
                     Messages.Handshake.HandleHandshakeResponse(client, message.data);
                     break;
-                case ClientMessageType.CHAT_MESSAGE:
-                    Messages.Chat.HandleChatMessage(client, message.data);
-                    break;
                 case ClientMessageType.PLAYER_STATUS:
                     Messages.PlayerStatus.HandlePlayerStatus(client, message.data);
                     break;
                 case ClientMessageType.PLAYER_COLOR:
                     Messages.PlayerColor.HandlePlayerColor(client, message.data);
-                    break;
-                case ClientMessageType.GROUP:
-                    Messages.GroupMessage.HandleMessage(client, message.data);
                     break;
                 case ClientMessageType.SCENARIO_DATA:
                     Messages.ScenarioData.HandleScenarioModuleData(client, message.data);
@@ -624,15 +610,6 @@ namespace DarkMultiPlayerServer
                 case ClientMessageType.VESSEL_REMOVE:
                     Messages.VesselRemove.HandleVesselRemoval(client, message.data);
                     break;
-                case ClientMessageType.PERMISSION:
-                    Messages.PermissionMessage.HandleMessage(client, message.data);
-                    break;
-                case ClientMessageType.CRAFT_LIBRARY:
-                    Messages.CraftLibrary.HandleCraftLibrary(client, message.data);
-                    break;
-                case ClientMessageType.SCREENSHOT_LIBRARY:
-                    Messages.ScreenshotLibrary.HandleScreenshotLibrary(client, message.data);
-                    break;
                 case ClientMessageType.FLAG_SYNC:
                     Messages.FlagSync.HandleFlagSync(client, message.data);
                     break;
@@ -645,11 +622,11 @@ namespace DarkMultiPlayerServer
                 case ClientMessageType.WARP_CONTROL:
                     Messages.WarpControl.HandleWarpControl(client, message.data);
                     break;
-                case ClientMessageType.LOCK_SYSTEM:
-                    Messages.LockSystem.HandleLockSystemMessage(client, message.data);
-                    break;
                 case ClientMessageType.MOD_DATA:
                     Messages.ModData.HandleModDataMessage(client, message.data);
+                    break;
+                case ClientMessageType.STORE_MESSAGE:
+                    Messages.Store.HandleStoreMessage(client, message.data);
                     break;
                 case ClientMessageType.KERBAL_REMOVE:
                     Messages.VesselRemove.HandleKerbalRemoval(client, message.data);
@@ -660,14 +637,11 @@ namespace DarkMultiPlayerServer
                 case ClientMessageType.CONNECTION_END:
                     Messages.ConnectionEnd.HandleConnectionEnd(client, message.data);
                     break;
-                case ClientMessageType.MODPACK_DATA:
-                    Messages.Modpack.HandleModpackMessage(client, message.data);
-                    break;
                 default:
                     DarkLog.Debug("Unhandled message type " + message.type);
                     Messages.ConnectionEnd.SendConnectionEnd(client, "Unhandled message type " + message.type);
 #if DEBUG
-                    throw new NotImplementedException("Message type not implemented");
+                    throw new NotImplementedException("Message type not implemented: " + message.type);
 #else
                         break;
 #endif
@@ -888,7 +862,6 @@ namespace DarkMultiPlayerServer
         public byte[] challange;
         public string playerName = "Unknown";
         public string clientVersion;
-        public bool isBanned;
         public IPAddress ipAddress;
         public string publicKey;
         //subspace tracking

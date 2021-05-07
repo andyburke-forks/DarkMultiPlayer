@@ -43,35 +43,23 @@ namespace DarkMultiPlayer
         private const float UPDATE_STATUS_INTERVAL = .2f;
         //Services
         private DMPGame dmpGame;
-        private Settings dmpSettings;
         private WarpWorker warpWorker;
-        private ChatWorker chatWorker;
-        private CraftLibraryWorker craftLibraryWorker;
-        private ScreenshotWorker screenshotWorker;
         private TimeSyncer timeSyncer;
         private PlayerStatusWorker playerStatusWorker;
         private OptionsWindow optionsWindow;
         private PlayerColorWorker playerColorWorker;
-        private GroupsWindow groupsWindow;
-        private PermissionsWindow permissionsWindow;
         private NamedAction updateAction;
         private NamedAction drawAction;
         private StringBuilder stringBuilder = new StringBuilder(128);
 
-        public PlayerStatusWindow(DMPGame dmpGame, Settings dmpSettings, WarpWorker warpWorker, ChatWorker chatWorker, CraftLibraryWorker craftLibraryWorker, ScreenshotWorker screenshotWorker, TimeSyncer timeSyncer, PlayerStatusWorker playerStatusWorker, OptionsWindow optionsWindow, PlayerColorWorker playerColorWorker, GroupsWindow groupsWindow, PermissionsWindow permissionsWindow)
+        public PlayerStatusWindow(DMPGame dmpGame,WarpWorker warpWorker, TimeSyncer timeSyncer, PlayerStatusWorker playerStatusWorker, OptionsWindow optionsWindow, PlayerColorWorker playerColorWorker)
         {
             this.dmpGame = dmpGame;
-            this.dmpSettings = dmpSettings;
             this.warpWorker = warpWorker;
-            this.chatWorker = chatWorker;
-            this.craftLibraryWorker = craftLibraryWorker;
-            this.screenshotWorker = screenshotWorker;
             this.timeSyncer = timeSyncer;
             this.playerStatusWorker = playerStatusWorker;
             this.optionsWindow = optionsWindow;
             this.playerColorWorker = playerColorWorker;
-            this.groupsWindow = groupsWindow;
-            this.permissionsWindow = permissionsWindow;
             updateAction = new NamedAction(Update);
             drawAction = new NamedAction(Draw);
             this.dmpGame.updateEvent.Add(updateAction);
@@ -188,21 +176,6 @@ namespace DarkMultiPlayer
             GUI.DragWindow(moveRect);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            GUIStyle chatButtonStyle = buttonStyle;
-            if (chatWorker.chatButtonHighlighted)
-            {
-                chatButtonStyle = highlightStyle;
-            }
-            chatWorker.display = GUILayout.Toggle(chatWorker.display, "Chat", chatButtonStyle);
-            craftLibraryWorker.display = GUILayout.Toggle(craftLibraryWorker.display, "Craft", buttonStyle);
-            groupsWindow.display = GUILayout.Toggle(groupsWindow.display, "Group", buttonStyle);
-            permissionsWindow.display = GUILayout.Toggle(permissionsWindow.display, "Permissions", buttonStyle);
-            GUIStyle screenshotButtonStyle = buttonStyle;
-            if (screenshotWorker.screenshotButtonHighlighted)
-            {
-                screenshotButtonStyle = highlightStyle;
-            }
-            screenshotWorker.display = GUILayout.Toggle(screenshotWorker.display, "Screenshot", screenshotButtonStyle);
             if (GUILayout.Button("-", buttonStyle))
             {
                 minmized = true;
@@ -317,7 +290,7 @@ namespace DarkMultiPlayer
 
                 foreach (string currentPlayer in currentEntry.players)
                 {
-                    if (currentPlayer == dmpSettings.playerName)
+                    if (currentPlayer == Settings.singleton.playerName)
                     {
                         DrawPlayerEntry(playerStatusWorker.myPlayerStatus, playerColorWorker.GetPlayerColor(currentPlayer));
                     }
@@ -620,20 +593,6 @@ namespace DarkMultiPlayer
             GUI.DragWindow(moveRect);
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
-            GUIStyle chatButtonStyle = buttonStyle;
-            if (chatWorker.chatButtonHighlighted)
-            {
-                chatButtonStyle = highlightStyle;
-            }
-            chatWorker.display = GUILayout.Toggle(chatWorker.display, "C", chatButtonStyle);
-            groupsWindow.display = GUILayout.Toggle(groupsWindow.display, "G", buttonStyle);
-            permissionsWindow.display = GUILayout.Toggle(permissionsWindow.display, "P", buttonStyle);
-            GUIStyle screenshotButtonStyle = buttonStyle;
-            if (screenshotWorker.screenshotButtonHighlighted)
-            {
-                screenshotButtonStyle = highlightStyle;
-            }
-            screenshotWorker.display = GUILayout.Toggle(screenshotWorker.display, "S", screenshotButtonStyle);
             optionsWindow.display = GUILayout.Toggle(optionsWindow.display, "O", buttonStyle);
             if (GUILayout.Button("+", buttonStyle))
             {

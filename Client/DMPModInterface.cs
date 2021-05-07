@@ -138,7 +138,7 @@ namespace DarkMultiPlayer
         /// <param name="modName">Mod name</param>
         /// <param name="messageData">The message payload (MessageWriter can make this easier)</param>
         /// <param name="relay">If set to <c>true</c>, The server will relay the message to all other authenticated clients</param>
-        /// <param name="highPriority">If set to <c>true</c>, DMP will send this in the high priority queue (Which will send before all vessel updates and screenshots)</param>
+        /// <param name="highPriority">If set to <c>true</c>, DMP will send this in the high priority queue (Which will send before all vessel updates)</param>
         public void SendDMPModMessage(string modName, byte[] messageData, bool relay, bool highPriority)
         {
             if (modName == null)

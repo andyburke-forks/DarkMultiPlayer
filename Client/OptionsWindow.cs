@@ -32,9 +32,6 @@ namespace DarkMultiPlayer
         private const int descWidth = 75;
         private const int sepWidth = 5;
         //Keybindings
-        private bool settingChat;
-        private bool settingScreenshot;
-        private string settingKeyMessage = "cancel";
         private string toolbarMode;
         private string interpolatorMode;
         // Toolbar
@@ -48,23 +45,17 @@ namespace DarkMultiPlayer
         private GUIStyle sectionHeaderStyle;
         //Services
         private DMPGame dmpGame;
-        private Settings dmpSettings;
         private NetworkWorker networkWorker;
         private PlayerColorWorker playerColorWorker;
         private UniverseSyncCache universeSyncCache;
-        private ModWorker modWorker;
         private UniverseConverterWindow universeConverterWindow;
-        private ServerListDisclaimerWindow serverListDisclaimerWindow;
         private ToolbarSupport toolbarSupport;
 
-        public OptionsWindow(Settings dmpSettings, UniverseSyncCache universeSyncCache, ModWorker modWorker, UniverseConverterWindow universeConverterWindow, ToolbarSupport toolbarSupport, ServerListDisclaimerWindow serverListDisclaimerWindow)
+        public OptionsWindow(UniverseSyncCache universeSyncCache, UniverseConverterWindow universeConverterWindow, ToolbarSupport toolbarSupport)
         {
-            this.dmpSettings = dmpSettings;
             this.universeSyncCache = universeSyncCache;
-            this.modWorker = modWorker;
             this.universeConverterWindow = universeConverterWindow;
             this.toolbarSupport = toolbarSupport;
-            this.serverListDisclaimerWindow = serverListDisclaimerWindow;
         }
 
         public void SetDependencies(DMPGame dmpGame, NetworkWorker networkWorker, PlayerColorWorker playerColorWorker)
@@ -116,7 +107,7 @@ namespace DarkMultiPlayer
             plrNameStyle.normal.background = new Texture2D(1, 1);
             plrNameStyle.normal.background.SetPixel(0, 0, new Color(0, 0, 0, .54f));
             plrNameStyle.normal.background.Apply();
-            plrNameStyle.normal.textColor = dmpSettings.playerColor;
+            plrNameStyle.normal.textColor = Settings.singleton.playerColor;
             plrNameStyle.padding = new RectOffset(4, 4, 2, 2);
             plrNameStyle.alignment = TextAnchor.MiddleLeft;
             plrNameStyle.fontStyle = FontStyle.Bold;
@@ -151,7 +142,7 @@ namespace DarkMultiPlayer
 
         private void UpdateToolbarString()
         {
-            switch (dmpSettings.toolbarType)
+            switch (Settings.singleton.toolbarType)
             {
                 case DMPToolbarType.DISABLED:
                     toolbarMode = "Toolbar: Disabled";
@@ -172,7 +163,7 @@ namespace DarkMultiPlayer
 
         private void UpdateInterpolatorString()
         {
-            switch (dmpSettings.interpolatorType)
+            switch (Settings.singleton.interpolatorType)
             {
                 case InterpolatorType.EXTRAPOLATE:
                     interpolatorMode = "Extrapolate with rotational acceleration";
@@ -223,29 +214,29 @@ namespace DarkMultiPlayer
                 groupY = 0;
 
                 GUI.Label(new Rect(0, groupY, descWidth, 20), "Name:", descriptorStyle);
-                plrNameStyle.normal.textColor = dmpSettings.playerColor;
+                plrNameStyle.normal.textColor = Settings.singleton.playerColor;
                 if (networkWorker != null && networkWorker.state == DarkMultiPlayerCommon.ClientState.RUNNING)
                     GUI.Label(new Rect(descWidth + sepWidth, groupY,
                         windowRect.width - (descWidth + sepWidth) - 20, 20),
-                        dmpSettings.playerName, plrNameStyle);
+                        Settings.singleton.playerName, plrNameStyle);
                 else
                 {
                     string newName = GUI.TextField(new Rect(
                         descWidth + sepWidth,
                         0,
                         windowRect.width - (descWidth + sepWidth) - 20,
-                        20), dmpSettings.playerName, plrNameStyle);
+                        20), Settings.singleton.playerName, plrNameStyle);
 
-                    if (!newName.Equals(dmpSettings.playerName))
+                    if (!newName.Equals(Settings.singleton.playerName))
                     {
-                        dmpSettings.playerName = newName;
-                        dmpSettings.SaveSettings();
+                        Settings.singleton.playerName = newName;
+                        Settings.singleton.SaveSettings();
                     }
                 }
                 groupY += 20 + 4;
 
 
-                Color playerColor = dmpSettings.playerColor;
+                Color playerColor = Settings.singleton.playerColor;
 
                 GUI.Label(new Rect(0, groupY, descWidth, 20), "Red:", descriptorStyle);
                 playerColor.r = GUI.HorizontalSlider(new Rect(
@@ -253,7 +244,7 @@ namespace DarkMultiPlayer
                     groupY + 5,
                     windowRect.width - (descWidth + sepWidth) - 20,
                     12
-                    ), dmpSettings.playerColor.r, 0, 1);
+                    ), Settings.singleton.playerColor.r, 0, 1);
                 groupY += 20;
 
                 GUI.Label(new Rect(0, groupY, descWidth, 20), "Green:", descriptorStyle);
@@ -262,7 +253,7 @@ namespace DarkMultiPlayer
                     groupY + 5,
                     windowRect.width - (descWidth + sepWidth) - 20,
                     12
-                    ), dmpSettings.playerColor.g, 0, 1);
+                    ), Settings.singleton.playerColor.g, 0, 1);
                 groupY += 20;
 
                 GUI.Label(new Rect(0, groupY, descWidth, 20), "Blue:", descriptorStyle);
@@ -271,16 +262,16 @@ namespace DarkMultiPlayer
                     groupY + 5,
                     windowRect.width - (descWidth + sepWidth) - 20,
                     12
-                    ), dmpSettings.playerColor.b, 0, 1);
+                    ), Settings.singleton.playerColor.b, 0, 1);
                 groupY += 22;
 
                 if (GUI.Button(new Rect(0, groupY, windowRect.width - 20, 20), "Random Color", buttonStyle))
                     playerColor = PlayerColorWorker.GenerateRandomColor();
 
-                if (!playerColor.Equals(dmpSettings.playerColor))
+                if (!playerColor.Equals(Settings.singleton.playerColor))
                 {
-                    dmpSettings.playerColor = playerColor;
-                    dmpSettings.SaveSettings();
+                    Settings.singleton.playerColor = playerColor;
+                    Settings.singleton.SaveSettings();
 
                     if (networkWorker != null && playerColorWorker != null && networkWorker.state == DarkMultiPlayerCommon.ClientState.RUNNING)
                         playerColorWorker.SendPlayerColorToServer();
@@ -302,7 +293,7 @@ namespace DarkMultiPlayer
                 groupY += 20;
 
                 GUI.Label(new Rect(0, groupY, descWidth, 20), "Maximum:", descriptorStyle);
-                string newSizeStr = GUI.TextField(new Rect(descWidth + sepWidth, groupY, windowRect.width - (descWidth + sepWidth) - 152, 20), dmpSettings.cacheSize.ToString(), textFieldStyle);
+                string newSizeStr = GUI.TextField(new Rect(descWidth + sepWidth, groupY, windowRect.width - (descWidth + sepWidth) - 152, 20), Settings.singleton.cacheSize.ToString(), textFieldStyle);
                 GUI.Label(new Rect(descWidth + sepWidth + 80, groupY, 100, 20), "MegaBytes (MB)");
                 int newSize;
                 if (string.IsNullOrEmpty(newSizeStr)) newSize = 1;
@@ -316,10 +307,10 @@ namespace DarkMultiPlayer
                     else newSize = 100000;
                 }
 
-                if (newSize != dmpSettings.cacheSize)
+                if (newSize != Settings.singleton.cacheSize)
                 {
-                    dmpSettings.cacheSize = newSize;
-                    dmpSettings.SaveSettings();
+                    Settings.singleton.cacheSize = newSize;
+                    Settings.singleton.SaveSettings();
                 }
                 groupY += 22;
 
@@ -344,104 +335,42 @@ namespace DarkMultiPlayer
                     noteStyle);
                 groupY += 48;
 
-                GUI.Label(new Rect(0, groupY, descWidth, 20), "Chat:", descriptorStyle);
-                string chatKey = dmpSettings.chatKey.ToString();
-                if (settingChat)
-                {
-                    chatKey = settingKeyMessage;
-                    if (Event.current.isKey)
-                    {
-                        if (Event.current.keyCode != KeyCode.Escape)
-                        {
-                            dmpSettings.chatKey = Event.current.keyCode;
-                            dmpSettings.SaveSettings();
-                        }
-                        settingChat = false;
-                    }
-                }
-
-                if (GUI.Button(new Rect(descWidth + sepWidth, groupY, windowRect.width - (descWidth + sepWidth) - 20, 20), chatKey, buttonStyle))
-                {
-                    settingScreenshot = false;
-                    settingChat = !settingChat;
-                }
-                groupY += 22;
-
-                GUI.Label(new Rect(0, groupY, descWidth, 20), "Screenshot:", descriptorStyle);
-                string screenshotKey = dmpSettings.screenshotKey.ToString();
-                if (settingScreenshot)
-                {
-                    screenshotKey = settingKeyMessage;
-                    if (Event.current.isKey)
-                    {
-                        if (Event.current.keyCode != KeyCode.Escape)
-                        {
-                            dmpSettings.screenshotKey = Event.current.keyCode;
-                            dmpSettings.SaveSettings();
-                        }
-                        settingScreenshot = false;
-                    }
-                }
-
-                if (GUI.Button(new Rect(descWidth + sepWidth, groupY, windowRect.width - (descWidth + sepWidth) - 20, 20), screenshotKey, buttonStyle))
-                {
-                    settingChat = false;
-                    settingScreenshot = !settingScreenshot;
-                }
                 GUI.EndGroup();
             }
             if (selectedTab == OptionsTab.ADVANCED)
             {
-                GUI.Box(new Rect(2, windowY, windowRect.width - 4, 20), "Mod Control", sectionHeaderStyle);
-                windowY += 22;
-
-                GUI.BeginGroup(new Rect(10, windowY, windowRect.width - 20, 42));
-                groupY = 0;
-
-                GUI.Label(new Rect(0, groupY, descWidth, 20), "Generate:", descriptorStyle);
-                if (GUI.Button(new Rect(descWidth + sepWidth, groupY, windowRect.width - (descWidth + sepWidth) - 20, 20), "Whitelist", buttonStyle))
-                    modWorker.GenerateModControlFile(true, true);
-
-                groupY += 22;
-
-                if (GUI.Button(new Rect(descWidth + sepWidth, groupY, windowRect.width - (descWidth + sepWidth) - 20, 20), "Blacklist", buttonStyle))
-                    modWorker.GenerateModControlFile(false, true);
-
-                GUI.EndGroup();
-                windowY += 47;
-
                 GUI.Box(new Rect(2, windowY, windowRect.width - 4, 20), "Other", sectionHeaderStyle);
                 windowY += 22;
 
                 GUI.BeginGroup(new Rect(10, windowY, windowRect.width - 20, 200));
                 groupY = 0;
 
-                bool toggleCompression = GUI.Toggle(new Rect(0, groupY, windowRect.width - 20, 20), dmpSettings.compressionEnabled, "Compress Network Traffic");
-                if (toggleCompression != dmpSettings.compressionEnabled)
+                bool toggleCompression = GUI.Toggle(new Rect(0, groupY, windowRect.width - 20, 20), Settings.singleton.compressionEnabled, "Compress Network Traffic");
+                if (toggleCompression != Settings.singleton.compressionEnabled)
                 {
-                    dmpSettings.compressionEnabled = toggleCompression;
-                    dmpSettings.SaveSettings();
+                    Settings.singleton.compressionEnabled = toggleCompression;
+                    Settings.singleton.SaveSettings();
                 }
                 groupY += 22;
 
-                bool toggleRevert = GUI.Toggle(new Rect(0, groupY, windowRect.width - 20, 20), dmpSettings.revertEnabled, "Enable Revert");
-                if (toggleRevert != dmpSettings.revertEnabled)
+                bool toggleRevert = GUI.Toggle(new Rect(0, groupY, windowRect.width - 20, 20), Settings.singleton.revertEnabled, "Enable Revert");
+                if (toggleRevert != Settings.singleton.revertEnabled)
                 {
-                    dmpSettings.revertEnabled = toggleRevert;
-                    dmpSettings.SaveSettings();
+                    Settings.singleton.revertEnabled = toggleRevert;
+                    Settings.singleton.SaveSettings();
                 }
                 groupY += 22;
 
                 if (GUI.Button(new Rect(0, groupY, windowRect.width - 20, 20), interpolatorMode, buttonStyle))
                 {
-                    int newSetting = (int)dmpSettings.interpolatorType + 1;
+                    int newSetting = (int)Settings.singleton.interpolatorType + 1;
                     //Overflow to 0
                     if (!Enum.IsDefined(typeof(InterpolatorType), newSetting))
                     {
                         newSetting = 0;
                     }
-                    dmpSettings.interpolatorType = (InterpolatorType)newSetting;
-                    dmpSettings.SaveSettings();
+                    Settings.singleton.interpolatorType = (InterpolatorType)newSetting;
+                    Settings.singleton.SaveSettings();
                     UpdateInterpolatorString();
                 }
 
@@ -452,29 +381,21 @@ namespace DarkMultiPlayer
 
                 if (GUI.Button(new Rect(0, groupY, windowRect.width - 20, 20), "Reset Disclaimer", buttonStyle))
                 {
-                    dmpSettings.disclaimerAccepted = 0;
-                    dmpSettings.SaveSettings();
-                }
-                groupY += 22;
-
-                if (GUI.Button(new Rect(0, groupY, windowRect.width - 20, 20), "Reset Serverlist Disclaimer"))
-                {
-                    dmpSettings.serverlistMode = 0;
-                    dmpSettings.SaveSettings();
-                    serverListDisclaimerWindow.SpawnDialog();
+                    Settings.singleton.disclaimerAccepted = 0;
+                    Settings.singleton.SaveSettings();
                 }
                 groupY += 22;
 
                 if (GUI.Button(new Rect(0, groupY, windowRect.width - 20, 20), toolbarMode, buttonStyle))
                 {
-                    int newSetting = (int)dmpSettings.toolbarType + 1;
+                    int newSetting = (int)Settings.singleton.toolbarType + 1;
                     //Overflow to 0
                     if (!Enum.IsDefined(typeof(DMPToolbarType), newSetting))
                     {
                         newSetting = 0;
                     }
-                    dmpSettings.toolbarType = (DMPToolbarType)newSetting;
-                    dmpSettings.SaveSettings();
+                    Settings.singleton.toolbarType = (DMPToolbarType)newSetting;
+                    Settings.singleton.SaveSettings();
                     UpdateToolbarString();
                     toolbarSupport.DetectSettingsChange();
                 }
@@ -483,15 +404,6 @@ namespace DarkMultiPlayer
 
                 showDebugWindow = GUI.Toggle(new Rect(0, groupY, windowRect.width - 20, 20), showDebugWindow, "Show debug window", buttonStyle);
 
-
-#if DEBUG
-                groupY += 22;
-                if (GUI.Button(new Rect(0, groupY, windowRect.width - 20, 20), "Check missing parts", buttonStyle))
-                {
-                    modWorker.CheckCommonStockParts();
-                }
-
-#endif
                 groupY += 22;
                 GUI.EndGroup();
             }

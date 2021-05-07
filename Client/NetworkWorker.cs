@@ -13,6 +13,8 @@ namespace DarkMultiPlayer
 {
     public class NetworkWorker
     {
+        public static NetworkWorker singleton = null;
+
         //Read from ConnectionWindow
         public ClientState state
         {
@@ -66,16 +68,11 @@ namespace DarkMultiPlayer
         private Dictionary<string, Guid> meshPlayerGuids = new Dictionary<string, Guid>();
         private string serverMotd;
         private bool displayMotd;
-        private bool disconnectAfterDownloadingMods = false;
         //Services
         private DMPGame dmpGame;
-        private Settings dmpSettings;
         private ConnectionWindow connectionWindow;
         private TimeSyncer timeSyncer;
-        private Groups groups;
-        private Permissions permissions;
         private WarpWorker warpWorker;
-        private ChatWorker chatWorker;
         private PlayerColorWorker playerColorWorker;
         private FlagSyncer flagSyncer;
         private PartKiller partKiller;
@@ -85,39 +82,30 @@ namespace DarkMultiPlayer
         private PlayerStatusWorker playerStatusWorker;
         private ScenarioWorker scenarioWorker;
         private DynamicTickWorker dynamicTickWorker;
-        private CraftLibraryWorker craftLibraryWorker;
-        private ScreenshotWorker screenshotWorker;
         private ToolbarSupport toolbarSupport;
-        private AdminSystem adminSystem;
-        private LockSystem lockSystem;
         private DMPModInterface dmpModInterface;
-        private ModWorker modWorker;
         private ConfigNodeSerializer configNodeSerializer;
         private UniverseSyncCache universeSyncCache;
-        private VesselRecorder vesselRecorder;
         private VesselRangeBumper vesselRangeBumper;
-        private ModpackWorker modpackWorker;
         private NamedAction updateAction;
         private Profiler profiler;
 
-        public NetworkWorker(DMPGame dmpGame, Settings dmpSettings, ConnectionWindow connectionWindow, ModWorker modWorker, ConfigNodeSerializer configNodeSerializer, Profiler profiler, VesselRangeBumper vesselRangeBumper)
+        public NetworkWorker(DMPGame dmpGame, ConnectionWindow connectionWindow, ConfigNodeSerializer configNodeSerializer, Profiler profiler, VesselRangeBumper vesselRangeBumper)
         {
             this.dmpGame = dmpGame;
-            this.dmpSettings = dmpSettings;
             this.connectionWindow = connectionWindow;
-            this.modWorker = modWorker;
             this.configNodeSerializer = configNodeSerializer;
             this.profiler = profiler;
             this.vesselRangeBumper = vesselRangeBumper;
             updateAction = new NamedAction(Update);
             dmpGame.updateEvent.Add(updateAction);
+            singleton = this;
         }
 
-        public void SetDependencies(TimeSyncer timeSyncer, WarpWorker warpWorker, ChatWorker chatWorker, PlayerColorWorker playerColorWorker, FlagSyncer flagSyncer, PartKiller partKiller, KerbalReassigner kerbalReassigner, AsteroidWorker asteroidWorker, VesselWorker vesselWorker, PlayerStatusWorker playerStatusWorker, ScenarioWorker scenarioWorker, DynamicTickWorker dynamicTickWorker, CraftLibraryWorker craftLibraryWorker, ScreenshotWorker screenshotWorker, ToolbarSupport toolbarSupport, AdminSystem adminSystem, LockSystem lockSystem, DMPModInterface dmpModInterface, UniverseSyncCache universeSyncCache, VesselRecorder vesselRecorder, Groups groups, Permissions permissions, ModpackWorker modpackWorker)
+        public void SetDependencies(TimeSyncer timeSyncer, WarpWorker warpWorker, PlayerColorWorker playerColorWorker, FlagSyncer flagSyncer, PartKiller partKiller, KerbalReassigner kerbalReassigner, AsteroidWorker asteroidWorker, VesselWorker vesselWorker, PlayerStatusWorker playerStatusWorker, ScenarioWorker scenarioWorker, DynamicTickWorker dynamicTickWorker, ToolbarSupport toolbarSupport, DMPModInterface dmpModInterface, UniverseSyncCache universeSyncCache)
         {
             this.timeSyncer = timeSyncer;
             this.warpWorker = warpWorker;
-            this.chatWorker = chatWorker;
             this.playerColorWorker = playerColorWorker;
             this.flagSyncer = flagSyncer;
             this.partKiller = partKiller;
@@ -127,18 +115,9 @@ namespace DarkMultiPlayer
             this.playerStatusWorker = playerStatusWorker;
             this.scenarioWorker = scenarioWorker;
             this.dynamicTickWorker = dynamicTickWorker;
-            this.craftLibraryWorker = craftLibraryWorker;
-            this.screenshotWorker = screenshotWorker;
             this.toolbarSupport = toolbarSupport;
-            this.adminSystem = adminSystem;
-            this.lockSystem = lockSystem;
             this.dmpModInterface = dmpModInterface;
             this.universeSyncCache = universeSyncCache;
-            this.vesselRecorder = vesselRecorder;
-            this.groups = groups;
-            this.permissions = permissions;
-            this.modpackWorker = modpackWorker;
-            vesselRecorder.SetHandlers(HandleVesselProto, HandleVesselUpdate, HandleVesselRemove);
         }
 
         //Called from main
@@ -162,64 +141,19 @@ namespace DarkMultiPlayer
 
             if (state == ClientState.AUTHENTICATED)
             {
-                state = ClientState.MODPACK_SYNCING;
-                connectionWindow.status = "Syncing modpack";
-            }
-            if (state == ClientState.MODPACK_SYNCING)
-            {
-                connectionWindow.status = modpackWorker.syncString;
-                if (modpackWorker.synced)
-                {
-                    if (!disconnectAfterDownloadingMods)
-                    {
-                        state = ClientState.MODPACK_SYNCED;
-                    }
-                    else
-                    {
-                        Disconnect("Failed mod validation");
-                    }
-                }
-            }
-            if (state == ClientState.MODPACK_SYNCED)
-            {
-                ModpackWorker.secondModSync = false;
                 SendPlayerStatus(playerStatusWorker.myPlayerStatus);
                 DarkLog.Debug("Sending time sync!");
                 state = ClientState.TIME_SYNCING;
-                connectionWindow.status = "Syncing server clock";
+                connectionWindow.status = "Syncing server clock ...";
                 SendTimeSync();
             }
-            if (timeSyncer.synced && state == ClientState.TIME_SYNCING)
+            if (state == ClientState.TIME_SYNCING && timeSyncer.synced)
             {
+                connectionWindow.status = "Syncing server clock ... synced.";
                 DarkLog.Debug("Time Synced!");
                 state = ClientState.TIME_SYNCED;
             }
-            if (state == ClientState.TIME_SYNCED)
-            {
-                DarkLog.Debug("Requesting Groups!");
-                connectionWindow.status = "Syncing groups";
-                state = ClientState.GROUPS_SYNCING;
-                SendGroupsRequest();
-            }
-            if (groups.synced && state == ClientState.GROUPS_SYNCING)
-            {
-                DarkLog.Debug("Groups Synced!");
-                state = ClientState.GROUPS_SYNCED;
-            }
-            if (state == ClientState.GROUPS_SYNCED)
-            {
-                DarkLog.Debug("Requesting permissions!");
-                connectionWindow.status = "Syncing permissions";
-                state = ClientState.PERMISSIONS_SYNCING;
-                SendPermissionsRequest();
-            }
-            if (permissions.synced && state == ClientState.PERMISSIONS_SYNCING)
-            {
-                DarkLog.Debug("Permissions Synced!");
-                state = ClientState.PERMISSIONS_SYNCED;
-            }
-            if (state == ClientState.PERMISSIONS_SYNCED)
-            {
+            if ( state == ClientState.TIME_SYNCED ) {
                 state = ClientState.SYNCING_KERBALS;
                 DarkLog.Debug("Requesting kerbals!");
                 SendKerbalsRequest();
@@ -233,7 +167,6 @@ namespace DarkMultiPlayer
                 //Process the messages so we get the subspaces, but don't enable the worker until the game is started.
                 warpWorker.ProcessWarpMessages();
                 timeSyncer.workerEnabled = true;
-                chatWorker.workerEnabled = true;
                 playerColorWorker.workerEnabled = true;
                 flagSyncer.workerEnabled = true;
                 flagSyncer.SendFlagList();
@@ -264,8 +197,6 @@ namespace DarkMultiPlayer
                 scenarioWorker.workerEnabled = true;
                 dynamicTickWorker.workerEnabled = true;
                 warpWorker.workerEnabled = true;
-                craftLibraryWorker.workerEnabled = true;
-                screenshotWorker.workerEnabled = true;
                 SendMotdRequest();
                 toolbarSupport.EnableToolbar();
             }
@@ -683,7 +614,7 @@ namespace DarkMultiPlayer
                     {
                         if (peer.guid != UdpMeshCommon.GetMeshAddress())
                         {
-                            meshClient.SendMessageToClient(peer.guid, (int)MeshMessageType.SET_PLAYER, System.Text.Encoding.UTF8.GetBytes(dmpSettings.playerName));
+                            meshClient.SendMessageToClient(peer.guid, (int)MeshMessageType.SET_PLAYER, System.Text.Encoding.UTF8.GetBytes(Settings.singleton.playerName));
                         }
                     }
                 }
@@ -840,18 +771,6 @@ namespace DarkMultiPlayer
                     if ((sendMessage == null) && (sendMessageQueueSplit.Count > 0))
                     {
                         sendMessage = sendMessageQueueSplit.Dequeue();
-                        //We just sent the last piece of a split message
-                        if (sendMessageQueueSplit.Count == 0)
-                        {
-                            if (lastSplitMessageType == ClientMessageType.CRAFT_LIBRARY)
-                            {
-                                craftLibraryWorker.finishedUploadingCraft = true;
-                            }
-                            if (lastSplitMessageType == ClientMessageType.SCREENSHOT_LIBRARY)
-                            {
-                                screenshotWorker.finishedUploadingScreenshot = true;
-                            }
-                        }
                     }
                     if ((sendMessage == null) && (sendMessageQueueLow.Count > 0))
                     {
@@ -995,9 +914,6 @@ namespace DarkMultiPlayer
                     case ServerMessageType.HANDSHAKE_REPLY:
                         HandleHandshakeReply(message.data);
                         break;
-                    case ServerMessageType.CHAT_MESSAGE:
-                        HandleChatMessage(message.data);
-                        break;
                     case ServerMessageType.SERVER_SETTINGS:
                         HandleServerSettings(message.data);
                         break;
@@ -1012,12 +928,6 @@ namespace DarkMultiPlayer
                         break;
                     case ServerMessageType.PLAYER_DISCONNECT:
                         HandlePlayerDisconnect(message.data);
-                        break;
-                    case ServerMessageType.GROUP:
-                        HandleGroupMessage(message.data);
-                        break;
-                    case ServerMessageType.PERMISSION:
-                        HandlePermissionMessage(message.data);
                         break;
                     case ServerMessageType.SCENARIO_DATA:
                         HandleScenarioModuleData(message.data);
@@ -1046,12 +956,6 @@ namespace DarkMultiPlayer
                     case ServerMessageType.VESSEL_REMOVE:
                         HandleVesselRemove(message.data);
                         break;
-                    case ServerMessageType.CRAFT_LIBRARY:
-                        HandleCraftLibrary(message.data);
-                        break;
-                    case ServerMessageType.SCREENSHOT_LIBRARY:
-                        HandleScreenshotLibrary(message.data);
-                        break;
                     case ServerMessageType.FLAG_SYNC:
                         flagSyncer.HandleMessage(message.data);
                         break;
@@ -1070,23 +974,17 @@ namespace DarkMultiPlayer
                     case ServerMessageType.WARP_CONTROL:
                         HandleWarpControl(message.data);
                         break;
-                    case ServerMessageType.ADMIN_SYSTEM:
-                        adminSystem.HandleAdminMessage(message.data);
-                        break;
-                    case ServerMessageType.LOCK_SYSTEM:
-                        lockSystem.HandleLockMessage(message.data);
-                        break;
                     case ServerMessageType.MOD_DATA:
                         dmpModInterface.HandleModData(message.data);
+                        break;
+                    case ServerMessageType.STORE_MESSAGE:
+                        Store.singleton.HandleStoreMessage(message.data);
                         break;
                     case ServerMessageType.SPLIT_MESSAGE:
                         HandleSplitMessage(message.data);
                         break;
                     case ServerMessageType.CONNECTION_END:
                         HandleConnectionEnd(message.data);
-                        break;
-                    case ServerMessageType.MODPACK_DATA:
-                        HandleModpackData(message.data);
                         break;
                 default:
                         DarkLog.Debug("Unhandled message type " + message.type);
@@ -1112,7 +1010,7 @@ namespace DarkMultiPlayer
                     using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024))
                     {
                         rsa.PersistKeyInCsp = false;
-                        rsa.FromXmlString(dmpSettings.playerPrivateKey);
+                        rsa.FromXmlString(Settings.singleton.playerPrivateKey);
                         byte[] signature = rsa.SignData(challange, CryptoConfig.CreateFromName("SHA256"));
                         SendHandshakeResponse(signature);
                         state = ClientState.HANDSHAKING;
@@ -1130,7 +1028,6 @@ namespace DarkMultiPlayer
 
             int reply = 0;
             string reason = "";
-            string modFileData = "";
             int serverProtocolVersion = -1;
             string serverVersion = "Unknown";
             try
@@ -1139,25 +1036,14 @@ namespace DarkMultiPlayer
                 {
                     reply = mr.Read<int>();
                     reason = mr.Read<string>();
-                    try
-                    {
-                        serverProtocolVersion = mr.Read<int>();
-                        serverVersion = mr.Read<string>();
-                    }
-                    catch
-                    {
-                        //We don't care about this throw on pre-protocol-9 servers.
-                    }
+                    serverProtocolVersion = mr.Read<int>();
+                    serverVersion = mr.Read<string>();
                     //If we handshook successfully, the mod data will be available to read.
                     if (reply == 0)
                     {
-                        Compression.compressionEnabled = mr.Read<bool>() && dmpSettings.compressionEnabled;
-                        modWorker.modControl = (ModControlMode)mr.Read<int>();
-                        if (modWorker.modControl != ModControlMode.DISABLED)
-                        {
-                            modFileData = mr.Read<string>();
-                        }
+                        Compression.compressionEnabled = mr.Read<bool>() && Settings.singleton.compressionEnabled;
                     }
+                    state = ClientState.AUTHENTICATED;
                 }
             }
             catch (Exception e)
@@ -1169,19 +1055,6 @@ namespace DarkMultiPlayer
             switch (reply)
             {
                 case 0:
-                    {
-                        if (modWorker.ParseModFile(modFileData))
-                        {
-                            DarkLog.Debug("Handshake successful");
-                            state = ClientState.AUTHENTICATED;
-                        }
-                        else
-                        {
-                            DarkLog.Debug("Failed to pass mod validation");
-                            state = ClientState.AUTHENTICATED;
-                            disconnectAfterDownloadingMods = true;
-                        }
-                    }
                     break;
                 default:
                     string disconnectReason = "Handshake failure: " + reason;
@@ -1219,72 +1092,6 @@ namespace DarkMultiPlayer
             }
         }
 
-        private void HandleChatMessage(ByteArray messageData)
-        {
-            using (MessageReader mr = new MessageReader(messageData.data))
-            {
-                ChatMessageType chatMessageType = (ChatMessageType)mr.Read<int>();
-
-                switch (chatMessageType)
-                {
-                    case ChatMessageType.LIST:
-                        {
-                            string[] playerList = mr.Read<string[]>();
-                            foreach (string playerName in playerList)
-                            {
-                                string[] channelList = mr.Read<string[]>();
-                                foreach (string channelName in channelList)
-                                {
-                                    chatWorker.QueueChatJoin(playerName, channelName);
-                                }
-                            }
-                        }
-                        break;
-                    case ChatMessageType.JOIN:
-                        {
-                            string playerName = mr.Read<string>();
-                            string channelName = mr.Read<string>();
-                            chatWorker.QueueChatJoin(playerName, channelName);
-                        }
-                        break;
-                    case ChatMessageType.LEAVE:
-                        {
-                            string playerName = mr.Read<string>();
-                            string channelName = mr.Read<string>();
-                            chatWorker.QueueChatLeave(playerName, channelName);
-                        }
-                        break;
-                    case ChatMessageType.CHANNEL_MESSAGE:
-                        {
-                            string playerName = mr.Read<string>();
-                            string channelName = mr.Read<string>();
-                            string channelMessage = mr.Read<string>();
-                            chatWorker.QueueChannelMessage(playerName, channelName, channelMessage);
-                        }
-                        break;
-                    case ChatMessageType.PRIVATE_MESSAGE:
-                        {
-                            string fromPlayer = mr.Read<string>();
-                            string toPlayer = mr.Read<string>();
-                            string privateMessage = mr.Read<string>();
-                            if (toPlayer == dmpSettings.playerName || fromPlayer == dmpSettings.playerName)
-                            {
-                                chatWorker.QueuePrivateMessage(fromPlayer, toPlayer, privateMessage);
-                            }
-                        }
-                        break;
-                    case ChatMessageType.CONSOLE_MESSAGE:
-                        {
-                            string message = mr.Read<string>();
-                            chatWorker.QueueSystemMessage(message);
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-
         private void HandleServerSettings(ByteArray messageData)
         {
             using (MessageReader mr = new MessageReader(messageData.data))
@@ -1295,11 +1102,8 @@ namespace DarkMultiPlayer
                 dmpGame.serverAllowCheats = mr.Read<bool>();
                 numberOfKerbals = mr.Read<int>();
                 numberOfVessels = mr.Read<int>();
-                screenshotWorker.screenshotHeight = mr.Read<int>();
                 asteroidWorker.maxNumberOfUntrackedAsteroids = mr.Read<int>();
-                chatWorker.consoleIdentifier = mr.Read<string>();
                 dmpGame.serverDifficulty = (GameDifficulty)mr.Read<int>();
-                vesselWorker.safetyBubbleDistance = mr.Read<float>();
                 if (dmpGame.serverDifficulty != GameDifficulty.CUSTOM)
                 {
                     dmpGame.serverParameters = GameParameters.GetDefaultParameters(Client.ConvertGameMode(dmpGame.gameMode), (GameParameters.Preset)dmpGame.serverDifficulty);
@@ -1368,11 +1172,6 @@ namespace DarkMultiPlayer
 
         private void HandlePlayerJoin(ByteArray messageData)
         {
-            using (MessageReader mr = new MessageReader(messageData.data))
-            {
-                string playerName = mr.Read<string>();
-                chatWorker.QueueChannelMessage(chatWorker.consoleIdentifier, "", playerName + " has joined the server");
-            }
         }
 
         private void HandlePlayerDisconnect(ByteArray messageData)
@@ -1382,9 +1181,6 @@ namespace DarkMultiPlayer
                 string playerName = mr.Read<string>();
                 warpWorker.RemovePlayer(playerName);
                 playerStatusWorker.RemovePlayerStatus(playerName);
-                chatWorker.QueueRemovePlayer(playerName);
-                lockSystem.ReleasePlayerLocks(playerName);
-                chatWorker.QueueChannelMessage(chatWorker.consoleIdentifier, "", playerName + " has left the server");
             }
         }
 
@@ -1459,7 +1255,6 @@ namespace DarkMultiPlayer
                 else
                 {
                     DarkLog.Debug("Failed to load kerbal!");
-                    chatWorker.PMMessageServer("WARNING: Kerbal " + kerbalName + " is DAMAGED!. Skipping load.");
                 }
             }
             if (state == ClientState.SYNCING_KERBALS)
@@ -1602,13 +1397,11 @@ namespace DarkMultiPlayer
                     else
                     {
                         DarkLog.Debug("Failed to load vessel " + vesselID + "!");
-                        chatWorker.PMMessageServer("WARNING: Vessel " + vesselID + " is DAMAGED!. Skipping load.");
                     }
                 }
                 else
                 {
                     DarkLog.Debug("Failed to load vessel" + vesselID + "!");
-                    chatWorker.PMMessageServer("WARNING: Vessel " + vesselID + " is DAMAGED!. Skipping load.");
                 }
                 ByteRecycler.ReleaseObject(vesselData);
             }
@@ -1686,6 +1479,11 @@ namespace DarkMultiPlayer
                     update.autopilotMode = mr.Read<int>();
                     update.lockedRotation = mr.Read<float[]>();
                 }
+
+                // update.part_states_count = mr.Read<int>();
+                // for( int part_index = 0; part_index < update.part_states_count; ++part_index ) {
+                //     update.part_states.Add( (PartStates)mr.Read<int>() );
+                // }
                 return update;
             }
         }
@@ -1732,148 +1530,8 @@ namespace DarkMultiPlayer
             }
         }
 
-        private void HandleCraftLibrary(ByteArray messageData)
+         private void HandlePingReply(ByteArray messageData)
         {
-            using (MessageReader mr = new MessageReader(messageData.data))
-            {
-                CraftMessageType messageType = (CraftMessageType)mr.Read<int>();
-                switch (messageType)
-                {
-                    case CraftMessageType.LIST:
-                        {
-                            string[] playerList = mr.Read<string[]>();
-                            foreach (string player in playerList)
-                            {
-                                bool vabExists = mr.Read<bool>();
-                                bool sphExists = mr.Read<bool>();
-                                bool subassemblyExists = mr.Read<bool>();
-                                DarkLog.Debug("Player: " + player + ", VAB: " + vabExists + ", SPH: " + sphExists + ", SUBASSEMBLY: " + subassemblyExists);
-                                if (vabExists)
-                                {
-                                    string[] vabCrafts = mr.Read<string[]>();
-                                    foreach (string vabCraft in vabCrafts)
-                                    {
-                                        CraftChangeEntry cce = new CraftChangeEntry();
-                                        cce.playerName = player;
-                                        cce.craftType = CraftType.VAB;
-                                        cce.craftName = vabCraft;
-                                        craftLibraryWorker.QueueCraftAdd(cce);
-                                    }
-                                }
-                                if (sphExists)
-                                {
-                                    string[] sphCrafts = mr.Read<string[]>();
-                                    foreach (string sphCraft in sphCrafts)
-                                    {
-                                        CraftChangeEntry cce = new CraftChangeEntry();
-                                        cce.playerName = player;
-                                        cce.craftType = CraftType.SPH;
-                                        cce.craftName = sphCraft;
-                                        craftLibraryWorker.QueueCraftAdd(cce);
-                                    }
-                                }
-                                if (subassemblyExists)
-                                {
-                                    string[] subassemblyCrafts = mr.Read<string[]>();
-                                    foreach (string subassemblyCraft in subassemblyCrafts)
-                                    {
-                                        CraftChangeEntry cce = new CraftChangeEntry();
-                                        cce.playerName = player;
-                                        cce.craftType = CraftType.SUBASSEMBLY;
-                                        cce.craftName = subassemblyCraft;
-                                        craftLibraryWorker.QueueCraftAdd(cce);
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    case CraftMessageType.ADD_FILE:
-                        {
-                            CraftChangeEntry cce = new CraftChangeEntry();
-                            cce.playerName = mr.Read<string>();
-                            cce.craftType = (CraftType)mr.Read<int>();
-                            cce.craftName = mr.Read<string>();
-                            craftLibraryWorker.QueueCraftAdd(cce);
-                            chatWorker.QueueChannelMessage(chatWorker.consoleIdentifier, "", cce.playerName + " shared " + cce.craftName + " (" + cce.craftType + ")");
-                        }
-                        break;
-                    case CraftMessageType.DELETE_FILE:
-                        {
-                            CraftChangeEntry cce = new CraftChangeEntry();
-                            cce.playerName = mr.Read<string>();
-                            cce.craftType = (CraftType)mr.Read<int>();
-                            cce.craftName = mr.Read<string>();
-                            craftLibraryWorker.QueueCraftDelete(cce);
-                        }
-                        break;
-                    case CraftMessageType.RESPOND_FILE:
-                        {
-                            CraftResponseEntry cre = new CraftResponseEntry();
-                            cre.playerName = mr.Read<string>();
-                            cre.craftType = (CraftType)mr.Read<int>();
-                            cre.craftName = mr.Read<string>();
-                            bool hasCraft = mr.Read<bool>();
-                            if (hasCraft)
-                            {
-                                cre.craftData = mr.Read<byte[]>();
-                                craftLibraryWorker.QueueCraftResponse(cre);
-                            }
-                            else
-                            {
-                                ScreenMessages.PostScreenMessage("Craft " + cre.craftName + " from " + cre.playerName + " not available", 5f, ScreenMessageStyle.UPPER_CENTER);
-                            }
-                        }
-                        break;
-                }
-            }
-        }
-
-        private void HandleScreenshotLibrary(ByteArray messageData)
-        {
-            using (MessageReader mr = new MessageReader(messageData.data))
-            {
-                ScreenshotMessageType messageType = (ScreenshotMessageType)mr.Read<int>();
-                switch (messageType)
-                {
-                    case ScreenshotMessageType.SEND_START_NOTIFY:
-                        {
-                            string fromPlayer = mr.Read<string>();
-                            screenshotWorker.downloadingScreenshotFromPlayer = fromPlayer;
-                        }
-                        break;
-                    case ScreenshotMessageType.NOTIFY:
-                        {
-                            string fromPlayer = mr.Read<string>();
-                            screenshotWorker.QueueNewNotify(fromPlayer);
-                        }
-                        break;
-                    case ScreenshotMessageType.SCREENSHOT:
-                        {
-                            string fromPlayer = mr.Read<string>();
-                            byte[] screenshotData = mr.Read<byte[]>();
-                            screenshotWorker.QueueNewScreenshot(fromPlayer, screenshotData);
-                        }
-                        break;
-                    case ScreenshotMessageType.WATCH:
-                        {
-                            string fromPlayer = mr.Read<string>();
-                            string watchPlayer = mr.Read<string>();
-                            screenshotWorker.QueueNewScreenshotWatch(fromPlayer, watchPlayer);
-                        }
-                        break;
-
-                }
-            }
-        }
-
-        private void HandlePingReply(ByteArray messageData)
-        {
-            using (MessageReader mr = new MessageReader(messageData.data))
-            {
-                int pingTime = (int)((DateTime.UtcNow.Ticks - mr.Read<long>()) / 10000f);
-                chatWorker.QueueChannelMessage(chatWorker.consoleIdentifier, "", "Ping: " + pingTime + "ms.");
-            }
-
         }
 
         private void HandleMotdReply(ByteArray messageData)
@@ -1884,19 +1542,8 @@ namespace DarkMultiPlayer
                 if (serverMotd != "")
                 {
                     displayMotd = true;
-                    chatWorker.QueueChannelMessage(chatWorker.consoleIdentifier, "", serverMotd);
                 }
             }
-        }
-
-        private void HandleGroupMessage(ByteArray messageData)
-        {
-            groups.QueueMessage(messageData);
-        }
-
-        private void HandlePermissionMessage(ByteArray messageData)
-        {
-            permissions.QueueMessage(messageData);
         }
 
         private void HandleWarpControl(ByteArray messageData)
@@ -1947,11 +1594,6 @@ namespace DarkMultiPlayer
             Disconnect("Server closed connection: " + reason);
         }
 
-        private void HandleModpackData(ByteArray data)
-        {
-            modpackWorker.HandleModpackMessage(data);
-        }
-
         #endregion
 
         #region Message Sending
@@ -1978,24 +1620,15 @@ namespace DarkMultiPlayer
             using (MessageWriter mw = new MessageWriter(messageWriterBuffer))
             {
                 mw.Write<int>(Common.PROTOCOL_VERSION);
-                mw.Write<string>(dmpSettings.playerName);
-                mw.Write<string>(dmpSettings.playerPublicKey);
+                mw.Write<string>(Settings.singleton.playerName);
+                mw.Write<string>(Settings.singleton.playerPublicKey);
                 mw.Write<byte[]>(signature);
                 mw.Write<string>(Common.PROGRAM_VERSION);
-                mw.Write<bool>(dmpSettings.compressionEnabled);
+                mw.Write<bool>(Settings.singleton.compressionEnabled);
                 newMessageLength = (int)mw.GetMessageLength();
             }
             newMessage.data = ByteRecycler.GetObject(newMessageLength);
             Array.Copy(messageWriterBuffer, 0, newMessage.data.data, 0, newMessageLength);
-            QueueOutgoingMessage(newMessage, true);
-        }
-        //Called from ChatWindow
-        public void SendChatMessage(byte[] messageData)
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.CHAT_MESSAGE;
-            newMessage.data = ByteRecycler.GetObject(messageData.Length);
-            messageData.CopyTo(newMessage.data.data, 0);
             QueueOutgoingMessage(newMessage, true);
         }
         //Called from PlayerStatusWorker
@@ -2033,36 +1666,6 @@ namespace DarkMultiPlayer
             using (MessageWriter mw = new MessageWriter(messageWriterBuffer))
             {
                 mw.Write<long>(DateTime.UtcNow.Ticks);
-                newMessageLength = (int)mw.GetMessageLength();
-            }
-            newMessage.data = ByteRecycler.GetObject(newMessageLength);
-            Array.Copy(messageWriterBuffer, 0, newMessage.data.data, 0, newMessageLength);
-            QueueOutgoingMessage(newMessage, true);
-        }
-
-        private void SendGroupsRequest()
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.GROUP;
-            int newMessageLength = 0;
-            using (MessageWriter mw = new MessageWriter(messageWriterBuffer))
-            {
-                mw.Write<int>((int)GroupMessageType.GROUP_REQUEST);
-                newMessageLength = (int)mw.GetMessageLength();
-            }
-            newMessage.data = ByteRecycler.GetObject(newMessageLength);
-            Array.Copy(messageWriterBuffer, 0, newMessage.data.data, 0, newMessageLength);
-            QueueOutgoingMessage(newMessage, true);
-        }
-
-        private void SendPermissionsRequest()
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.PERMISSION;
-            int newMessageLength = 0;
-            using (MessageWriter mw = new MessageWriter(messageWriterBuffer))
-            {
-                mw.Write<int>((int)PermissionMessageType.PERMISSION_REQUEST);
                 newMessageLength = (int)mw.GetMessageLength();
             }
             newMessage.data = ByteRecycler.GetObject(newMessageLength);
@@ -2178,7 +1781,7 @@ namespace DarkMultiPlayer
             if (isContractVessel)
             {
                 ConfigNode dmpNode = new ConfigNode();
-                dmpNode.AddValue("contractOwner", dmpSettings.playerPublicKey);
+                dmpNode.AddValue("contractOwner", Settings.singleton.playerPublicKey);
                 vesselNode.AddNode("DarkMultiPlayer", dmpNode);
             }
 
@@ -2220,7 +1823,6 @@ namespace DarkMultiPlayer
                 Array.Copy(messageWriterBuffer, 0, newMessage.data.data, 0, newMessageLength);
                 DarkLog.Debug("Sending vessel " + vessel.vesselID + ", name " + vessel.vesselName + ", type: " + vessel.vesselType + ", size: " + newMessage.data.Length);
                 QueueOutgoingMessage(newMessage, false);
-                vesselRecorder.RecordSend(newMessage.data, ClientMessageType.VESSEL_PROTO, vessel.vesselID);
                 ByteRecycler.ReleaseObject(vesselBytes);
             }
             else
@@ -2294,7 +1896,6 @@ namespace DarkMultiPlayer
         {
             ClientMessage newMessage = GetVesselUpdateMessage(update);
             QueueOutgoingMessage(newMessage, false);
-            vesselRecorder.RecordSend(newMessage.data, ClientMessageType.VESSEL_UPDATE, update.vesselID);
         }
         //Called from vesselWorker
         public void SendVesselUpdateMesh(VesselUpdate update, List<string> clientsInSubspace)
@@ -2302,7 +1903,7 @@ namespace DarkMultiPlayer
             ClientMessage newMessage = GetVesselUpdateMessage(update);
             foreach (string playerName in clientsInSubspace)
             {
-                if (meshPlayerGuids.ContainsKey(playerName) && playerName != dmpSettings.playerName)
+                if (meshPlayerGuids.ContainsKey(playerName) && playerName != Settings.singleton.playerName)
                 {
                     meshClient.SendMessageToClient(meshPlayerGuids[playerName], (int)MeshMessageType.VESSEL_UPDATE, newMessage.data.data, newMessage.data.Length);
                 }
@@ -2312,10 +1913,6 @@ namespace DarkMultiPlayer
         //Called from vesselWorker
         public void SendVesselRemove(Guid vesselID, bool isDockingUpdate)
         {
-            if (!permissions.PlayerHasVesselPermission(dmpSettings.playerName, vesselID))
-            {
-                return;
-            }
             DarkLog.Debug("Removing " + vesselID + " from the server");
             ClientMessage newMessage = new ClientMessage();
             newMessage.type = ClientMessageType.VESSEL_REMOVE;
@@ -2327,14 +1924,13 @@ namespace DarkMultiPlayer
                 mw.Write<bool>(isDockingUpdate);
                 if (isDockingUpdate)
                 {
-                    mw.Write<string>(dmpSettings.playerName);
+                    mw.Write<string>(Settings.singleton.playerName);
                 }
                 newMessageLength = (int)mw.GetMessageLength();
             }
             newMessage.data = ByteRecycler.GetObject(newMessageLength);
             Array.Copy(messageWriterBuffer, 0, newMessage.data.data, 0, newMessageLength);
             QueueOutgoingMessage(newMessage, false);
-            vesselRecorder.RecordSend(newMessage.data, ClientMessageType.VESSEL_REMOVE, vesselID);
         }
 
         // Called from VesselWorker
@@ -2352,24 +1948,6 @@ namespace DarkMultiPlayer
             }
             newMessage.data = ByteRecycler.GetObject(newMessageLength);
             Array.Copy(messageWriterBuffer, 0, newMessage.data.data, 0, newMessageLength);
-            QueueOutgoingMessage(newMessage, false);
-        }
-        //Called fro craftLibraryWorker
-        public void SendCraftLibraryMessage(byte[] messageData)
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.CRAFT_LIBRARY;
-            newMessage.data = ByteRecycler.GetObject(messageData.Length);
-            messageData.CopyTo(newMessage.data.data, 0);
-            QueueOutgoingMessage(newMessage, false);
-        }
-        //Called from ScreenshotWorker
-        public void SendScreenshotMessage(byte[] messageData)
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.SCREENSHOT_LIBRARY;
-            newMessage.data = ByteRecycler.GetObject(messageData.Length);
-            messageData.CopyTo(newMessage.data.data, 0);
             QueueOutgoingMessage(newMessage, false);
         }
         //Called from ScenarioWorker
@@ -2455,7 +2033,6 @@ namespace DarkMultiPlayer
                 DarkLog.Debug("Failed to create byte[] data for kerbal " + kerbalName);
             }
         }
-        //Called from chatWorker
         public void SendPingRequest()
         {
             ClientMessage newMessage = new ClientMessage();
@@ -2495,42 +2072,6 @@ namespace DarkMultiPlayer
             messageData.CopyTo(newMessage.data.data, 0);
             QueueOutgoingMessage(newMessage, true);
         }
-        //Called from groups
-        public void SendGroupMessage(byte[] messageData)
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.GROUP;
-            newMessage.data = ByteRecycler.GetObject(messageData.Length);
-            messageData.CopyTo(newMessage.data.data, 0);
-            QueueOutgoingMessage(newMessage, true);
-        }
-        //Called from permissions
-        public void SendPermissionsMessage(byte[] messageData)
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.PERMISSION;
-            newMessage.data = ByteRecycler.GetObject(messageData.Length);
-            messageData.CopyTo(newMessage.data.data, 0);
-            QueueOutgoingMessage(newMessage, true);
-        }
-        //Called from lockSystem
-        public void SendLockSystemMessage(byte[] messageData)
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.LOCK_SYSTEM;
-            newMessage.data = ByteRecycler.GetObject(messageData.Length);
-            messageData.CopyTo(newMessage.data.data, 0);
-            QueueOutgoingMessage(newMessage, true);
-        }
-        //Called from warpWorker
-        public void SendModpackMessage(byte[] messageData)
-        {
-            ClientMessage newMessage = new ClientMessage();
-            newMessage.type = ClientMessageType.MODPACK_DATA;
-            newMessage.data = ByteRecycler.GetObject(messageData.Length);
-            messageData.CopyTo(newMessage.data.data, 0);
-            QueueOutgoingMessage(newMessage, false);
-        }
 
         /// <summary>
         /// If you are a mod, call dmpModInterface.SendModMessage.
@@ -2563,6 +2104,15 @@ namespace DarkMultiPlayer
                 Array.Copy(messageWriterBuffer, 0, newMessage.data.data, 0, newMessageLength);
                 QueueOutgoingMessage(newMessage, true);
             }
+        }
+
+        public void SendStoreMessage(byte[] messageData)
+        {
+            ClientMessage newMessage = new ClientMessage();
+            newMessage.type = ClientMessageType.STORE_MESSAGE;
+            newMessage.data = ByteRecycler.GetObject(messageData.Length);
+            messageData.CopyTo(newMessage.data.data, 0);
+            QueueOutgoingMessage(newMessage, true);
         }
 
         public long GetStatistics(string statType)

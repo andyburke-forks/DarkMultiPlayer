@@ -25,7 +25,6 @@ namespace DarkMultiPlayerServer
         public static string players = "";
         public static long lastPlayerActivity;
         public static object universeSizeLock = new object();
-        public static string modFile;
         private static int day;
 
         public static void Main()
@@ -46,9 +45,6 @@ namespace DarkMultiPlayerServer
             //Periodic garbage collection
             long lastGarbageCollect = 0;
 
-            //Periodic screenshot check
-            long lastScreenshotExpiredCheck = 0;
-
             //Periodic log check
             long lastLogExpiredCheck = 0;
 
@@ -68,103 +64,19 @@ namespace DarkMultiPlayerServer
             string oldGameplayFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DMPGameplaySettings.txt");
             string newGameplayFile = Path.Combine(configDirectory, "GameplaySettings.txt");
 
-            // Run the conversion
-            BackwardsCompatibility.ConvertSettings(oldSettingsFile, newSettingsFile);
-            if (File.Exists(oldGameplayFile))
-            {
-                if (!File.Exists(newGameplayFile))
-                {
-                    File.Move(oldGameplayFile, newGameplayFile);
-                }
-                File.Delete(oldGameplayFile);
-            }
-
-            string oldModFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DMPModControl.txt");
-            modFile = Path.Combine(configDirectory, "mod-control.txt");
-
-            // Move mod control file to Config/mod-control.txt
-            if (File.Exists(oldModFile))
-            {
-                if (!File.Exists(modFile))
-                {
-                    File.Move(oldModFile, modFile);
-                }
-                File.Delete(modFile);
-            }
-
-            // Move DMPPlayerBans to Config/banned-players.txt
-            string oldBanlistFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DMPPlayerBans.txt");
-            string newBanlistFile = Path.Combine(configDirectory, "banned-players.txt");
-            if (File.Exists(oldBanlistFile))
-            {
-                if (!File.Exists(newBanlistFile))
-                {
-                    File.Move(oldBanlistFile, newBanlistFile);
-                }
-                File.Delete(oldBanlistFile);
-            }
-
-            // Move DMPIPBans to Config/banned-ips.txt
-            oldBanlistFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DMPIPBans.txt");
-            newBanlistFile = Path.Combine(configDirectory, "banned-ips.txt");
-            if (File.Exists(oldBanlistFile))
-            {
-                if (!File.Exists(newBanlistFile))
-                {
-                    File.Move(oldBanlistFile, newBanlistFile);
-                }
-                File.Delete(oldBanlistFile);
-            }
-
-            // Move DMPKeyBans to Config/banned-keys.txt
-            oldBanlistFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DMPKeyBans.txt");
-            newBanlistFile = Path.Combine(configDirectory, "banned-keys.txt");
-            if (File.Exists(oldBanlistFile))
-            {
-                if (!File.Exists(newBanlistFile))
-                {
-                    File.Move(oldBanlistFile, newBanlistFile);
-                }
-                File.Delete(oldBanlistFile);
-            }
-
-            // Move DMPAdmins to Config/admins.txt
-            string oldAdminsFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DMPAdmins.txt");
-            string newAdminsFile = Path.Combine(configDirectory, "admins.txt");
-            if (File.Exists(oldAdminsFile))
-            {
-                if (!File.Exists(newAdminsFile))
-                {
-                    File.Move(oldAdminsFile, newAdminsFile);
-                }
-                File.Delete(oldAdminsFile);
-            }
-
             //Register the server commands
             CommandHandler.RegisterCommand("exit", Server.ShutDown, "Shuts down the server");
             CommandHandler.RegisterCommand("quit", Server.ShutDown, "Shuts down the server");
             CommandHandler.RegisterCommand("shutdown", Server.ShutDown, "Shuts down the server");
             CommandHandler.RegisterCommand("restart", Server.Restart, "Restarts the server");
             CommandHandler.RegisterCommand("kick", KickCommand.KickPlayer, "Kicks a player from the server");
-            CommandHandler.RegisterCommand("ban", BanSystem.fetch.BanPlayer, "Bans a player from the server");
-            CommandHandler.RegisterCommand("banip", BanSystem.fetch.BanIP, "Bans an IP Address from the server");
-            CommandHandler.RegisterCommand("bankey", BanSystem.fetch.BanPublicKey, "Bans a Guid from the server");
             CommandHandler.RegisterCommand("pm", PMCommand.HandleCommand, "Sends a message to a player");
-            CommandHandler.RegisterCommand("admin", AdminCommand.HandleCommand, "Sets a player as admin/removes admin from the player");
-            CommandHandler.RegisterCommand("whitelist", WhitelistCommand.HandleCommand, "Change the server whitelist");
 
             //Register the ctrl+c event
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CatchExit);
             serverStarting = true;
 
-            //Fix kerbals from 0.23.5 to 0.24 (Now indexed by string, thanks Squad!
-            BackwardsCompatibility.FixKerbals();
-
             //Remove player tokens
-            BackwardsCompatibility.RemoveOldPlayerTokens();
-
-            //Add new stock parts
-            BackwardsCompatibility.UpdateModcontrolPartList();
 
             if (System.Net.Sockets.Socket.OSSupportsIPv6)
             {
@@ -218,14 +130,6 @@ namespace DarkMultiPlayerServer
                     GameplaySettings.Load();
                 }
 
-                if (Settings.settingsStore.modpackMode == ModpackMode.GAMEDATA)
-                {
-                    DarkLog.Normal("Loading modpack data");
-                    ModpackSystem.fetch.LoadAuto();
-                    CommandHandler.RegisterCommand("reloadmods", ModpackSystem.fetch.HandleReloadCommand, "Reload Game");
-                    DarkLog.Normal("Loaded data!");
-                }
-
                 //Load universe
                 DarkLog.Normal("Loading universe... ");
                 CheckUniverse();
@@ -252,12 +156,6 @@ namespace DarkMultiPlayerServer
                     {
                         lastGarbageCollect = serverClock.ElapsedMilliseconds;
                         GC.Collect();
-                    }
-                    //Run the screenshot expire function every 10 minutes
-                    if ((serverClock.ElapsedMilliseconds - lastScreenshotExpiredCheck) > 600000)
-                    {
-                        lastScreenshotExpiredCheck = serverClock.ElapsedMilliseconds;
-                        ScreenshotExpire.ExpireScreenshots();
                     }
                     //Run the log expire function every 10 minutes
                     if ((serverClock.ElapsedMilliseconds - lastLogExpiredCheck) > 600000)
@@ -332,10 +230,6 @@ namespace DarkMultiPlayerServer
         private static void CheckUniverse()
         {
 
-            if (!File.Exists(modFile))
-            {
-                GenerateNewModFile();
-            }
             if (!Directory.Exists(universeDirectory))
             {
                 Directory.CreateDirectory(universeDirectory);
@@ -377,23 +271,7 @@ namespace DarkMultiPlayerServer
             }
         }
         //Get mod file SHA
-        public static string GetModControlSHA()
-        {
-            return Common.CalculateSHA256Hash(modFile);
-        }
 
-        public static void GenerateNewModFile()
-        {
-            if (File.Exists(modFile))
-            {
-                File.Move(modFile, modFile + ".bak");
-            }
-            string modFileData = Common.GenerateModFileStringData(new string[0], new string[0], false, new string[0], Common.GetStockParts().ToArray());
-            using (StreamWriter sw = new StreamWriter(modFile))
-            {
-                sw.Write(modFileData);
-            }
-        }
         //Shutdown
         public static void ShutDown(string commandArgs)
         {
@@ -562,21 +440,8 @@ namespace DarkMultiPlayerServer
 
                 HttpListenerContext context = listener.EndGetContext(result);
                 string responseText = "";
-                bool handled = false;
 
-                if (context.Request.Url.PathAndQuery.StartsWith("/modcontrol", StringComparison.Ordinal))
-                {
-                    if (!File.Exists(modFile))
-                    {
-                        GenerateNewModFile();
-                    }
-                    responseText = File.ReadAllText(modFile);
-                    handled = true;
-                }
-                if (!handled)
-                {
-                    responseText = new ServerInfo(Settings.settingsStore).GetJSON();
-                }
+                responseText = new ServerInfo(Settings.settingsStore).GetJSON();
 
                 byte[] buffer = Encoding.UTF8.GetBytes(responseText);
                 context.Response.ContentLength64 = buffer.LongLength;

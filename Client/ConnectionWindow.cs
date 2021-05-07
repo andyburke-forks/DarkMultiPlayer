@@ -49,17 +49,10 @@ namespace DarkMultiPlayer
             return Common.PROGRAM_VERSION;
         }
         //Services
-        private Settings dmpSettings;
         private OptionsWindow optionsWindow;
-        private ServerListDisclaimerWindow serverListDisclaimerWindow;
-        private ServersWindow serversWindow;
-
-        public ConnectionWindow(Settings dmpSettings, OptionsWindow optionsWindow, ServersWindow serversWindow, ServerListDisclaimerWindow serverListDisclaimerWindow)
+        public ConnectionWindow(OptionsWindow optionsWindow)
         {
-            this.dmpSettings = dmpSettings;
             this.optionsWindow = optionsWindow;
-            this.serversWindow = serversWindow;
-            this.serverListDisclaimerWindow = serverListDisclaimerWindow;
         }
 
         public void Update()
@@ -113,11 +106,11 @@ namespace DarkMultiPlayer
             GUILayout.Space(20);
             GUILayout.BeginHorizontal();
             GUILayout.Label("Player name:", labelOptions);
-            string oldPlayerName = dmpSettings.playerName;
-            dmpSettings.playerName = GUILayout.TextArea(dmpSettings.playerName, 32, textAreaStyle); // Max 32 characters
-            if (oldPlayerName != dmpSettings.playerName)
+            string oldPlayerName = Settings.singleton.playerName;
+            Settings.singleton.playerName = GUILayout.TextArea(Settings.singleton.playerName, 32, textAreaStyle); // Max 32 characters
+            if (oldPlayerName != Settings.singleton.playerName)
             {
-                dmpSettings.playerName = dmpSettings.playerName.Replace("\n", "");
+                Settings.singleton.playerName = Settings.singleton.playerName.Replace("\n", "");
                 renameEventHandled = false;
             }
             GUILayout.EndHorizontal();
@@ -135,9 +128,9 @@ namespace DarkMultiPlayer
                 if (selected != -1)
                 {
                     //Load the existing server settings
-                    serverName = dmpSettings.servers[selected].name;
-                    serverAddress = dmpSettings.servers[selected].address;
-                    serverPort = dmpSettings.servers[selected].port.ToString();
+                    serverName = Settings.singleton.servers[selected].name;
+                    serverAddress = Settings.singleton.servers[selected].address;
+                    serverPort = Settings.singleton.servers[selected].port.ToString();
                 }
             }
             //Draw connect button
@@ -167,20 +160,6 @@ namespace DarkMultiPlayer
             GUI.enabled = true;
             optionsWindow.display = GUILayout.Toggle(optionsWindow.display, "Options", buttonStyle);
 
-            if (dmpSettings.serverlistMode != -1)
-            {
-                if (dmpSettings.serverlistMode == 0)
-                {
-                    if (GUILayout.Button("Servers", buttonStyle))
-                    {
-                        serverListDisclaimerWindow.SpawnDialog();
-                    }
-                }
-                else
-                {
-                    serversWindow.display = GUILayout.Toggle(serversWindow.display, "Servers", buttonStyle);
-                }
-            }
             GUILayout.EndHorizontal();
             if (addingServerSafe)
             {
@@ -222,16 +201,16 @@ namespace DarkMultiPlayer
                 }
             }
             GUILayout.Label("Servers:");
-            if (dmpSettings.servers.Count == 0)
+            if (Settings.singleton.servers.Count == 0)
             {
                 GUILayout.Label("(None - Add a server first)");
             }
 
             scrollPos = GUILayout.BeginScrollView(scrollPos, GUILayout.Width(WINDOW_WIDTH - 5), GUILayout.Height(WINDOW_HEIGHT - 100));
 
-            for (int serverPos = 0; serverPos < dmpSettings.servers.Count; serverPos++)
+            for (int serverPos = 0; serverPos < Settings.singleton.servers.Count; serverPos++)
             {
-                bool thisSelected = GUILayout.Toggle(serverPos == selectedSafe, dmpSettings.servers[serverPos].name, buttonStyle);
+                bool thisSelected = GUILayout.Toggle(serverPos == selectedSafe, Settings.singleton.servers[serverPos].name, buttonStyle);
                 if (selected == selectedSafe)
                 {
                     if (thisSelected)

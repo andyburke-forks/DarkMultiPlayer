@@ -17,13 +17,13 @@ namespace DarkMultiPlayerServer
         {
             if (!Directory.Exists(logDirectory))
             {
-                //Screenshot directory is missing so there will be no screenshots to delete.
+                //log directory is missing so there will be no logs to delete.
                 return;
             }
             string[] logFiles = Directory.GetFiles(logDirectory);
             foreach (string logFile in logFiles)
             {
-                //Check if the expireScreenshots setting is enabled
+                //Check if the expirelogs setting is enabled
                 if (Settings.settingsStore.expireLogs > 0)
                 {
                     //If the file is older than a day, delete it

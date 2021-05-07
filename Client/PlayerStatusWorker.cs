@@ -19,20 +19,16 @@ namespace DarkMultiPlayer
         //Services
         private DMPGame dmpGame;
         private VesselWorker vesselWorker;
-        private LockSystem lockSystem;
         private NetworkWorker networkWorker;
-        private Permissions permissions;
         private NamedAction updateAction;
 
-        public PlayerStatusWorker(DMPGame dmpGame, Settings dmpSettings, VesselWorker vesselWorker, LockSystem lockSystem, NetworkWorker networkWorker, Permissions permissions)
+        public PlayerStatusWorker(DMPGame dmpGame, VesselWorker vesselWorker, NetworkWorker networkWorker)
         {
             this.dmpGame = dmpGame;
             this.vesselWorker = vesselWorker;
-            this.lockSystem = lockSystem;
             this.networkWorker = networkWorker;
-            this.permissions = permissions;
             myPlayerStatus = new PlayerStatus();
-            myPlayerStatus.playerName = dmpSettings.playerName;
+            myPlayerStatus.playerName = Settings.singleton.playerName;
             myPlayerStatus.statusText = "Syncing";
             updateAction = new NamedAction(Update);
             dmpGame.updateEvent.Add(updateAction);
@@ -52,99 +48,50 @@ namespace DarkMultiPlayer
                         //Send vessel+status update
                         if (FlightGlobals.ActiveVessel != null)
                         {
-                            if (!vesselWorker.isSpectating)
+                            myPlayerStatus.vesselText = FlightGlobals.ActiveVessel.vesselName;
+                            string bodyName = FlightGlobals.ActiveVessel.mainBody.bodyName;
+                            switch (FlightGlobals.ActiveVessel.situation)
                             {
-                                myPlayerStatus.vesselText = FlightGlobals.ActiveVessel.vesselName;
-                                string bodyName = FlightGlobals.ActiveVessel.mainBody.bodyName;
-                                switch (FlightGlobals.ActiveVessel.situation)
-                                {
-                                    case (Vessel.Situations.DOCKED):
-                                        myPlayerStatus.statusText = "Docked above " + bodyName;
-                                        break;
-                                    case (Vessel.Situations.ESCAPING):
-                                        if (FlightGlobals.ActiveVessel.orbit.timeToPe < 0)
-                                        {
-                                            myPlayerStatus.statusText = "Escaping " + bodyName;
-                                        }
-                                        else
-                                        {
-                                            myPlayerStatus.statusText = "Encountering " + bodyName;
-                                        }
-                                        break;
-                                    case (Vessel.Situations.FLYING):
-                                        if (!SafetyBubble.isInSafetyBubble(FlightGlobals.fetch.activeVessel.GetWorldPos3D(), FlightGlobals.fetch.activeVessel.mainBody, vesselWorker.safetyBubbleDistance))
-                                        {
-                                            myPlayerStatus.statusText = "Flying above " + bodyName;
-                                        }
-                                        else
-                                        {
-                                            myPlayerStatus.statusText = "Flying in safety bubble";
-                                        }
-                                        break;
-                                    case (Vessel.Situations.LANDED):
-                                        if (!SafetyBubble.isInSafetyBubble(FlightGlobals.fetch.activeVessel.GetWorldPos3D(), FlightGlobals.fetch.activeVessel.mainBody, vesselWorker.safetyBubbleDistance))
-                                        {
-                                            myPlayerStatus.statusText = "Landed on " + bodyName;
-                                        }
-                                        else
-                                        {
-                                            myPlayerStatus.statusText = "Landed in safety bubble";
-                                        }
-                                        break;
-                                    case (Vessel.Situations.ORBITING):
-                                        myPlayerStatus.statusText = "Orbiting " + bodyName;
-                                        break;
-                                    case (Vessel.Situations.PRELAUNCH):
-                                        if (!SafetyBubble.isInSafetyBubble(FlightGlobals.fetch.activeVessel.GetWorldPos3D(), FlightGlobals.fetch.activeVessel.mainBody, vesselWorker.safetyBubbleDistance))
-                                        {
-                                            myPlayerStatus.statusText = "Launching from " + bodyName;
-                                        }
-                                        else
-                                        {
-                                            myPlayerStatus.statusText = "Launching from safety bubble";
-                                        }
-                                        break;
-                                    case (Vessel.Situations.SPLASHED):
-                                        myPlayerStatus.statusText = "Splashed on " + bodyName;
-                                        break;
-                                    case (Vessel.Situations.SUB_ORBITAL):
-                                        if (FlightGlobals.ActiveVessel.verticalSpeed > 0)
-                                        {
-                                            myPlayerStatus.statusText = "Ascending from " + bodyName;
-                                        }
-                                        else
-                                        {
-                                            myPlayerStatus.statusText = "Descending to " + bodyName;
-                                        }
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-                            else
-                            {
-                                if (lockSystem.LockExists("control-" + FlightGlobals.ActiveVessel.id.ToString()))
-                                {
-                                    if (lockSystem.LockIsOurs("control-" + FlightGlobals.ActiveVessel.id.ToString()))
+                                case (Vessel.Situations.DOCKED):
+                                    myPlayerStatus.statusText = "Docked above " + bodyName;
+                                    break;
+                                case (Vessel.Situations.ESCAPING):
+                                    if (FlightGlobals.ActiveVessel.orbit.timeToPe < 0)
                                     {
-                                        myPlayerStatus.statusText = "Waiting for vessel control";
-                                    }
-                                    else 
-                                    {
-                                        myPlayerStatus.statusText = "Spectating " + lockSystem.LockOwner("control-" + FlightGlobals.ActiveVessel.id.ToString());
-                                    }
-                                }
-                                else
-                                {
-                                    if (permissions.PlayerHasVesselPermission(myPlayerStatus.playerName, FlightGlobals.ActiveVessel.id))
-                                    {
-                                        myPlayerStatus.statusText = "Spectating future updates";
+                                        myPlayerStatus.statusText = "Escaping " + bodyName;
                                     }
                                     else
                                     {
-                                        myPlayerStatus.statusText = "Spectating protected vessel";
+                                        myPlayerStatus.statusText = "Encountering " + bodyName;
                                     }
-                                }
+                                    break;
+                                case (Vessel.Situations.FLYING):
+                                    myPlayerStatus.statusText = "Flying above " + bodyName;
+                                    break;
+                                case (Vessel.Situations.LANDED):
+                                    myPlayerStatus.statusText = "Landed on " + bodyName;
+                                    break;
+                                case (Vessel.Situations.ORBITING):
+                                    myPlayerStatus.statusText = "Orbiting " + bodyName;
+                                    break;
+                                case (Vessel.Situations.PRELAUNCH):
+                                        myPlayerStatus.statusText = "Launching from " + bodyName;
+                                    break;
+                                case (Vessel.Situations.SPLASHED):
+                                    myPlayerStatus.statusText = "Splashed on " + bodyName;
+                                    break;
+                                case (Vessel.Situations.SUB_ORBITAL):
+                                    if (FlightGlobals.ActiveVessel.verticalSpeed > 0)
+                                    {
+                                        myPlayerStatus.statusText = "Ascending from " + bodyName;
+                                    }
+                                    else
+                                    {
+                                        myPlayerStatus.statusText = "Descending to " + bodyName;
+                                    }
+                                    break;
+                                default:
+                                    break;
                             }
                         }
                         else

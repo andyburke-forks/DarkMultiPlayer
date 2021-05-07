@@ -165,28 +165,10 @@ namespace DarkMultiPlayerServer.Messages
 
             if (handshakeReponse == HandshakeReply.HANDSHOOK_SUCCESSFULLY)
             {
-                if (BanSystem.fetch.IsPlayerNameBanned(client.playerName) || BanSystem.fetch.IsIPBanned(client.ipAddress) || BanSystem.fetch.IsPublicKeyBanned(client.publicKey))
-                {
-                    handshakeReponse = HandshakeReply.PLAYER_BANNED;
-                    reason = "You were banned from the server!";
-                }
-            }
-
-            if (handshakeReponse == HandshakeReply.HANDSHOOK_SUCCESSFULLY)
-            {
                 if (ClientHandler.GetActiveClientCount() >= Settings.settingsStore.maxPlayers)
                 {
                     handshakeReponse = HandshakeReply.SERVER_FULL;
                     reason = "Server is full";
-                }
-            }
-
-            if (handshakeReponse == HandshakeReply.HANDSHOOK_SUCCESSFULLY)
-            {
-                if (Settings.settingsStore.whitelisted && !WhitelistSystem.fetch.IsWhitelisted(client.playerName))
-                {
-                    handshakeReponse = HandshakeReply.NOT_WHITELISTED;
-                    reason = "You are not on the whitelist";
                 }
             }
 
@@ -233,29 +215,10 @@ namespace DarkMultiPlayerServer.Messages
                 if (response == 0)
                 {
                     mw.Write<bool>(Settings.settingsStore.compressionEnabled);
-                    mw.Write<int>((int)Settings.settingsStore.modControl);
-                    if (Settings.settingsStore.modControl != ModControlMode.DISABLED)
-                    {
-                        if (!File.Exists(Server.modFile))
-                        {
-                            Server.GenerateNewModFile();
-                        }
-                        string modFileData = File.ReadAllText(Server.modFile);
-                        mw.Write<string>(modFileData);
-                    }
                 }
                 newMessage.data = mw.GetMessageBytes();
             }
             ClientHandler.SendToClient(client, newMessage, true);
-            if (response == 0 && Settings.settingsStore.modpackMode == ModpackMode.GAMEDATA)
-            {
-                Modpack.SendModList(client);
-            }
-            if (response == 0 && Settings.settingsStore.modpackMode == ModpackMode.CKAN)
-            {
-                Modpack.SendCkan(client);
-            }
-            Modpack.SendModDone(client);
         }
     }
 }

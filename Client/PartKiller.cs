@@ -12,11 +12,9 @@ namespace DarkMultiPlayer
         private Guid loadGuid = Guid.Empty;
         private bool registered = false;
         //Services
-        private LockSystem lockSystem;
 
-        public PartKiller(LockSystem lockSystem)
+        public PartKiller()
         {
-            this.lockSystem = lockSystem;
         }
 
         public void RegisterGameHooks()
@@ -67,8 +65,10 @@ namespace DarkMultiPlayer
                         {
                             vesselOk = true;
                         }
-                        //Either of the locks are ours or neither of the locks exist
-                        if (lockSystem.LockIsOurs("control-" + otherVessel.id) || lockSystem.LockIsOurs("update-" + otherVessel.id) || (!lockSystem.LockExists("control-" + otherVessel.id) && !lockSystem.LockExists("update-" + otherVessel.id)))
+
+                        // FIXME: what's going on here?
+                        string updater = Store.singleton.get( "position-updater-" + otherVessel.id );
+                        if ( updater == null || updater == Settings.singleton.playerName )
                         {
                             vesselOk = true;
                         }

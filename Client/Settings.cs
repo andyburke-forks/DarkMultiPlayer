@@ -9,18 +9,16 @@ namespace DarkMultiPlayer
 {
     public class Settings
     {
+        public static Settings singleton = null;
+
         //Settings
         public string playerName;
         public string playerPublicKey;
         public string playerPrivateKey;
         public int cacheSize;
         public int disclaimerAccepted;
-        //-1 disabled and hide button, 0 - ask user, 1 grab on servers click, 2 grab on startup
-        public int serverlistMode;
         public List<ServerEntry> servers = new List<ServerEntry>();
         public Color playerColor;
-        public KeyCode screenshotKey;
-        public KeyCode chatKey;
         public string selectedFlag;
         public bool compressionEnabled;
         public bool revertEnabled;
@@ -115,8 +113,6 @@ namespace DarkMultiPlayer
                 }
                 playerColor = new Color(redColor, greenColor, blueColor, 1f);
 
-                chatKey = (KeyCode)Int32.Parse(xmlDoc.SelectSingleNode("/settings/global/@chat-key").Value);
-                screenshotKey = (KeyCode)Int32.Parse(xmlDoc.SelectSingleNode("/settings/global/@screenshot-key").Value);
                 selectedFlag = xmlDoc.SelectSingleNode("/settings/global/@selected-flag").Value;
                 compressionEnabled = Boolean.Parse(xmlDoc.SelectSingleNode("/settings/global/@compression").Value);
                 revertEnabled = Boolean.Parse(xmlDoc.SelectSingleNode("/settings/global/@revert").Value);
@@ -220,41 +216,11 @@ namespace DarkMultiPlayer
                     saveAfterLoad = true;
                 }
 
-                if (!int.TryParse(settingsNode.GetValue("serverlist-mode"), out serverlistMode))
-                {
-                    DarkLog.Debug("[Settings]: Adding serverlist-mode to settings file");
-                    serverlistMode = 0;
-                    saveAfterLoad = true;
-                }
-
                 if (!playerNode.TryGetValue("color", ref playerColor))
                 {
                     DarkLog.Debug("[Settings]: Adding color to settings file");
                     playerColor = PlayerColorWorker.GenerateRandomColor();
                     saveAfterLoad = true;
-                }
-
-                int chatKey = (int)KeyCode.BackQuote, screenshotKey = (int)KeyCode.F8;
-                if (!int.TryParse(bindingsNode.GetValue("chat"), out chatKey))
-                {
-                    DarkLog.Debug("[Settings]: Adding chat key to settings file");
-                    this.chatKey = KeyCode.BackQuote;
-                    saveAfterLoad = true;
-                }
-                else
-                {
-                    this.chatKey = (KeyCode)chatKey;
-                }
-
-                if (!int.TryParse(bindingsNode.GetValue("screenshot"), out screenshotKey))
-                {
-                    DarkLog.Debug("[Settings]: Adding screenshot key to settings file");
-                    this.screenshotKey = KeyCode.F8;
-                    saveAfterLoad = true;
-                }
-                else
-                {
-                    this.screenshotKey = (KeyCode)screenshotKey;
                 }
 
                 if (!playerNode.TryGetValue("flag", ref selectedFlag))
@@ -384,12 +350,9 @@ namespace DarkMultiPlayer
             playerNode.SetValue("flag", selectedFlag, true);
 
             ConfigNode bindingsNode = settingsNode.AddNode("KEYBINDINGS");
-            bindingsNode.SetValue("chat", (int)chatKey, true);
-            bindingsNode.SetValue("screenshot", (int)screenshotKey, true);
 
             settingsNode.SetValue("cacheSize", cacheSize, true);
             settingsNode.SetValue("disclaimer", disclaimerAccepted, true);
-            settingsNode.SetValue("serverlist-mode", serverlistMode, true);
             settingsNode.SetValue("compression", compressionEnabled, true);
             settingsNode.SetValue("revert", revertEnabled, true);
             settingsNode.SetValue("interpolation", interpolatorType.ToString(), true);

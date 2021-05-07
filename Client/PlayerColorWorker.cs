@@ -11,8 +11,6 @@ namespace DarkMultiPlayer
     {
         //Services
         private DMPGame dmpGame;
-        private Settings dmpSettings;
-        private LockSystem lockSystem;
         private PlayerStatusWindow playerStatusWindow;
         private NetworkWorker networkWorker;
         private bool registered;
@@ -26,11 +24,9 @@ namespace DarkMultiPlayer
         //Can't declare const - But no touchy.
         public readonly Color DEFAULT_COLOR = Color.grey;
 
-        public PlayerColorWorker(DMPGame dmpGame, Settings dmpSettings, LockSystem lockSystem, NetworkWorker networkWorker)
+        public PlayerColorWorker(DMPGame dmpGame, NetworkWorker networkWorker)
         {
             this.dmpGame = dmpGame;
-            this.dmpSettings = dmpSettings;
-            this.lockSystem = lockSystem;
             this.networkWorker = networkWorker;
             updateEvent = new NamedAction(Update);
             dmpGame.updateEvent.Add(updateEvent);
@@ -103,46 +99,34 @@ namespace DarkMultiPlayer
             }
             if (workerEnabled)
             {
-                if (lockSystem.ControlLockExists(colorVessel.id) && !lockSystem.ControlLockIsOurs(colorVessel.id))
+                if (colorVessel.orbitRenderer != null)
                 {
-                    string vesselOwner = lockSystem.ControlLockOwner(colorVessel.id);
-                    DarkLog.Debug("Vessel " + colorVessel.id.ToString() + " owner is " + vesselOwner);
-                    if (colorVessel.orbitRenderer != null)
-                    {
-                        colorVessel.orbitRenderer.SetColor(GetPlayerColor(vesselOwner));
-                    }
-                }
-                else
-                {
-                    if (colorVessel.orbitRenderer != null)
-                    {
-                        colorVessel.orbitRenderer.SetColor(DEFAULT_COLOR);
-                    }
+                    colorVessel.orbitRenderer.SetColor(DEFAULT_COLOR);
                 }
             }
         }
 
-        private void OnLockAcquire(string playerName, string lockName, bool result)
+        private void on_set(string key, string value, string result)
         {
             if (workerEnabled)
             {
-                UpdateVesselColorsFromLockName(lockName);
+                UpdateVesselColorsFromLockName(key);
             }
         }
 
-        private void OnLockRelease(string playerName, string lockName)
+        private void on_unset(string key, bool was_unset)
         {
             if (workerEnabled)
             {
-                UpdateVesselColorsFromLockName(lockName);
+                UpdateVesselColorsFromLockName(key);
             }
         }
 
-        private void UpdateVesselColorsFromLockName(string lockName)
+        private void UpdateVesselColorsFromLockName(string key)
         {
-            if (lockName.StartsWith("control-", StringComparison.Ordinal))
+            if (key.StartsWith("position-updater-", StringComparison.Ordinal))
             {
-                string vesselID = lockName.Substring(8);
+                string vesselID = key.Substring(8);
                 foreach (Vessel findVessel in FlightGlobals.fetch.vessels)
                 {
                     if (findVessel.id.ToString() == vesselID)
@@ -165,9 +149,9 @@ namespace DarkMultiPlayer
         {
             lock (playerColorLock)
             {
-                if (playerName == dmpSettings.playerName)
+                if (playerName == Settings.singleton.playerName)
                 {
-                    return dmpSettings.playerColor;
+                    return Settings.singleton.playerColor;
                 }
                 if (playerColors.ContainsKey(playerName))
                 {
@@ -225,8 +209,8 @@ namespace DarkMultiPlayer
             using (MessageWriter mw = new MessageWriter())
             {
                 mw.Write<int>((int)PlayerColorMessageType.SET);
-                mw.Write<string>(dmpSettings.playerName);
-                mw.Write<float[]>(ConvertColorToFloatArray(dmpSettings.playerColor));
+                mw.Write<string>(Settings.singleton.playerName);
+                mw.Write<float[]>(ConvertColorToFloatArray(Settings.singleton.playerColor));
                 networkWorker.SendPlayerColorMessage(mw.GetMessageBytes());
             }
         }
@@ -295,8 +279,8 @@ namespace DarkMultiPlayer
             {
                 registered = true;
                 GameEvents.onVesselCreate.Add(this.DetectNewVessel);
-                lockSystem.RegisterAcquireHook(this.OnLockAcquire);
-                lockSystem.RegisterReleaseHook(this.OnLockRelease);
+                Store.singleton.add_on_set_listener( this.on_set );
+                Store.singleton.add_on_unset_listener( this.on_unset );
             }
         }
 
@@ -306,8 +290,6 @@ namespace DarkMultiPlayer
             {
                 registered = false;
                 GameEvents.onVesselCreate.Remove(this.DetectNewVessel);
-                lockSystem.UnregisterAcquireHook(this.OnLockAcquire);
-                lockSystem.UnregisterReleaseHook(this.OnLockRelease);
             }
         }
 

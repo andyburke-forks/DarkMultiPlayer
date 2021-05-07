@@ -41,16 +41,14 @@ namespace DarkMultiPlayer
         private const float REPORT_SKEW_RATE_INTERVAL = 10f;
         //Services
         private DMPGame dmpGame;
-        private Settings dmpSettings;
         private TimeSyncer timeSyncer;
         private NetworkWorker networkWorker;
         private PlayerStatusWorker playerStatusWorker;
         private NamedAction updateAction;
 
-        public WarpWorker(DMPGame dmpGame, Settings dmpSettings, TimeSyncer timeSyncer, NetworkWorker networkWorker, PlayerStatusWorker playerStatusWorker)
+        public WarpWorker(DMPGame dmpGame, TimeSyncer timeSyncer, NetworkWorker networkWorker, PlayerStatusWorker playerStatusWorker)
         {
             this.dmpGame = dmpGame;
-            this.dmpSettings = dmpSettings;
             this.timeSyncer = timeSyncer;
             this.networkWorker = networkWorker;
             this.playerStatusWorker = playerStatusWorker;
@@ -107,11 +105,11 @@ namespace DarkMultiPlayer
             //Send a CHANGE_WARP message if needed
             if ((warpMode == WarpMode.MCW_FORCE) || (warpMode == WarpMode.MCW_VOTE) || (warpMode == WarpMode.SUBSPACE) || warpMode == WarpMode.SUBSPACE_SIMPLE)
             {
-                if (!clientWarpList.ContainsKey(dmpSettings.playerName))
+                if (!clientWarpList.ContainsKey(Settings.singleton.playerName))
                 {
-                    clientWarpList[dmpSettings.playerName] = new PlayerWarpRate();
+                    clientWarpList[Settings.singleton.playerName] = new PlayerWarpRate();
                 }
-                PlayerWarpRate ourRate = clientWarpList[dmpSettings.playerName];
+                PlayerWarpRate ourRate = clientWarpList[Settings.singleton.playerName];
                 if ((ourRate.rateIndex != TimeWarp.CurrentRateIndex) || (ourRate.isPhysWarp != (TimeWarp.WarpMode == TimeWarp.Modes.LOW)))
                 {
                     ourRate.isPhysWarp = (TimeWarp.WarpMode == TimeWarp.Modes.LOW);
@@ -135,7 +133,7 @@ namespace DarkMultiPlayer
                 //Follow the warp master into warp if needed (MCW_FORCE/MCW_VOTE)
                 if (warpMode == WarpMode.MCW_FORCE || warpMode == WarpMode.MCW_VOTE)
                 {
-                    if ((warpMaster != "") && (warpMaster != dmpSettings.playerName))
+                    if ((warpMaster != "") && (warpMaster != Settings.singleton.playerName))
                     {
                         if (clientWarpList.ContainsKey(warpMaster))
                         {
@@ -236,7 +234,7 @@ namespace DarkMultiPlayer
                 if (warpMaster != "")
                 {
                     int timeLeft = (int)(controllerExpireTime - Client.realtimeSinceStartup);
-                    if (warpMaster != dmpSettings.playerName)
+                    if (warpMaster != Settings.singleton.playerName)
                     {
                         DisplayMessage(warpMaster + " currently has warp control (timeout " + timeLeft + "s)", 1f);
                     }
@@ -250,7 +248,7 @@ namespace DarkMultiPlayer
                     if (voteMaster != "")
                     {
                         int timeLeft = (int)(voteExpireTime - Client.realtimeSinceStartup);
-                        if (voteMaster == dmpSettings.playerName)
+                        if (voteMaster == Settings.singleton.playerName)
                         {
                             DisplayMessage("Waiting for vote replies... Yes: " + voteYesCount + ", No: " + voteNoCount + ", Needed: " + voteNeededCount + " (" + timeLeft + "s left)", 1f);
                         }
@@ -274,7 +272,7 @@ namespace DarkMultiPlayer
                 float ourRate = GetRateAtIndex(requestIndex, requestPhysWarp);
                 string displayMessage = String.Empty;
 
-                if (fastestPlayer != null && fastestPlayer != dmpSettings.playerName && clientWarpList.ContainsKey(fastestPlayer))
+                if (fastestPlayer != null && fastestPlayer != Settings.singleton.playerName && clientWarpList.ContainsKey(fastestPlayer))
                 {
                     PlayerWarpRate fastestRate = clientWarpList[fastestPlayer];
                     displayMessage += "\n" + fastestPlayer + " is requesting rate " + GetRateAtIndex(fastestRate.rateIndex, fastestRate.isPhysWarp) + "x";
@@ -449,7 +447,7 @@ namespace DarkMultiPlayer
                     }
                 }
             }
-            else if (warpMaster == dmpSettings.playerName)
+            else if (warpMaster == Settings.singleton.playerName)
             {
                 if (stopWarpKey && (TimeWarp.CurrentRate < 1.1f))
                 {
@@ -476,7 +474,7 @@ namespace DarkMultiPlayer
                 }
                 else
                 {
-                    if (voteMaster != dmpSettings.playerName)
+                    if (voteMaster != Settings.singleton.playerName)
                     {
                         //Send a vote if we haven't voted yet
                         if (!voteSent)
@@ -504,7 +502,7 @@ namespace DarkMultiPlayer
             }
             else
             {
-                if (warpMaster == dmpSettings.playerName)
+                if (warpMaster == Settings.singleton.playerName)
                 {
                     if (stopWarpKey && (TimeWarp.CurrentRate < 1.1f))
                     {
@@ -555,7 +553,7 @@ namespace DarkMultiPlayer
                 newWarpRate.rateIndex = requestIndex;
                 newWarpRate.planetTime = Planetarium.GetUniversalTime();
                 newWarpRate.serverClock = timeSyncer.GetServerClock();
-                clientWarpList[dmpSettings.playerName] = newWarpRate;
+                clientWarpList[Settings.singleton.playerName] = newWarpRate;
                 DarkLog.Debug("Warp request change: " + requestIndex + ", physwarp: " + requestPhysWarp);
                 using (MessageWriter mw = new MessageWriter())
                 {
@@ -579,7 +577,7 @@ namespace DarkMultiPlayer
 
         private void ReleaseWarpMaster()
         {
-            if (warpMaster == dmpSettings.playerName)
+            if (warpMaster == Settings.singleton.playerName)
             {
                 SendNewSubspace();
             }
@@ -651,7 +649,7 @@ namespace DarkMultiPlayer
                     case WarpMessageType.CHANGE_SUBSPACE:
                         {
                             string fromPlayer = mr.Read<string>();
-                            if (fromPlayer != dmpSettings.playerName)
+                            if (fromPlayer != Settings.singleton.playerName)
                             {
                                 int changeSubspaceID = mr.Read<int>();
                                 clientSubspaceList[fromPlayer] = changeSubspaceID;
@@ -695,7 +693,7 @@ namespace DarkMultiPlayer
             {
                 this.voteYesCount = voteYesCount;
                 this.voteNoCount = voteNoCount;
-                if (voteMaster == dmpSettings.playerName && voteNoCount >= voteFailedCount)
+                if (voteMaster == Settings.singleton.playerName && voteNoCount >= voteFailedCount)
                 {
                     DisplayMessage("Vote failed!", 3f);
                 }
@@ -792,7 +790,7 @@ namespace DarkMultiPlayer
             }
             int currentSubspace = timeSyncer.currentSubspace;
             List<string> allPlayers = new List<string>();
-            allPlayers.Add(dmpSettings.playerName);
+            allPlayers.Add(Settings.singleton.playerName);
             allPlayers.AddRange(clientSubspaceList.Keys);
             allPlayers.Sort(PlayerSorter);
             SubspaceDisplayEntry sde = cacheGetSubspaceDisplayEntriesMCWNone.Item1[0];
@@ -806,9 +804,9 @@ namespace DarkMultiPlayer
             else
             {
                 sde.isWarping = true;
-                if (clientWarpList.ContainsKey(dmpSettings.playerName))
+                if (clientWarpList.ContainsKey(Settings.singleton.playerName))
                 {
-                    sde.warpingEntry = clientWarpList[dmpSettings.playerName];
+                    sde.warpingEntry = clientWarpList[Settings.singleton.playerName];
                 }
             }
             return cacheGetSubspaceDisplayEntriesMCWNone;
@@ -841,12 +839,12 @@ namespace DarkMultiPlayer
             if (timeSyncer.currentSubspace != -1)
             {
                 List<string> newList = new List<string>();
-                newList.Add(dmpSettings.playerName);
+                newList.Add(Settings.singleton.playerName);
                 nonWarpCache.Add(timeSyncer.currentSubspace, newList);
             }
             else
             {
-                warpCache.Add(dmpSettings.playerName);
+                warpCache.Add(Settings.singleton.playerName);
             }
 
             //Add other players
@@ -887,7 +885,7 @@ namespace DarkMultiPlayer
                     sde.subspaceID = subspaceEntry.Key;
                     sde.subspaceEntry = timeSyncer.GetSubspace(subspaceEntry.Key);
                     subspaceEntry.Value.Sort(PlayerSorter);
-                    sde.isUs = subspaceEntry.Value.Contains(dmpSettings.playerName);
+                    sde.isUs = subspaceEntry.Value.Contains(Settings.singleton.playerName);
                     sde.players = subspaceEntry.Value.ToArray();
                     if (usedCacheEntries < cacheGetSubspaceDisplayEntriesSubspace.Length)
                     {
@@ -915,7 +913,7 @@ namespace DarkMultiPlayer
                     SubspaceDisplayEntry sde = cacheUnknownGetSubspaceDisplayEntriesSubspaceDict[warpingPlayer];
                     sde.warpingEntry = clientWarpList[warpingPlayer];
                     sde.players = new string[] { warpingPlayer };
-                    sde.isUs = (warpingPlayer == dmpSettings.playerName);
+                    sde.isUs = (warpingPlayer == Settings.singleton.playerName);
                     sde.isWarping = true;
                     sde.isUnknown = false;
                     sde.subspaceID = 0;
@@ -945,7 +943,7 @@ namespace DarkMultiPlayer
                     }
                     SubspaceDisplayEntry sde = cacheUnknownGetSubspaceDisplayEntriesSubspaceDict[playerName];
                     sde.players = unknownPlayers.ToArray();
-                    sde.isUs = unknownPlayers.Contains(dmpSettings.playerName);
+                    sde.isUs = unknownPlayers.Contains(Settings.singleton.playerName);
                     sde.isUnknown = true;
                     sde.isWarping = false;
                     sde.subspaceID = 0;
@@ -961,7 +959,7 @@ namespace DarkMultiPlayer
 
         private int PlayerSorter(string lhs, string rhs)
         {
-            string ourName = dmpSettings.playerName;
+            string ourName = Settings.singleton.playerName;
             if (lhs == ourName)
             {
                 return -1;
@@ -1097,7 +1095,7 @@ namespace DarkMultiPlayer
             if (timeSyncer.currentSubspace == subspace)
             {
                 //We are on top!
-                returnList.Insert(0, dmpSettings.playerName);
+                returnList.Insert(0, Settings.singleton.playerName);
             }
             return returnList;
         }

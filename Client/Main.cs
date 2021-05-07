@@ -17,9 +17,6 @@ namespace DarkMultiPlayer
         public static bool modDisabled = false;
         public static bool warnDuplicateInstall = false;
         private bool dmpSaveChecked = false;
-        private int facilitiesAdded = 0;
-        private int stockSitesAdded = 0;
-        private int modSitesAdded = 0;
         //Disconnect message
         public static bool displayDisconnectMessage;
         public static ScreenMessage disconnectMessage;
@@ -36,19 +33,13 @@ namespace DarkMultiPlayer
         //This singleton is only for other mod access to the following services.
         public static Client dmpClient;
         //Services
-        public Settings dmpSettings;
         public ToolbarSupport toolbarSupport;
         public UniverseSyncCache universeSyncCache;
-        public ModWorker modWorker;
-        public ModWindow modWindow;
         public ConnectionWindow connectionWindow;
         public OptionsWindow optionsWindow;
         public UniverseConverter universeConverter;
         public UniverseConverterWindow universeConverterWindow;
         public DisclaimerWindow disclaimerWindow;
-        public ServersWindow serversWindow;
-        public ServerListDisclaimerWindow serverListDisclaimerWindow;
-        public ServerListConnection serverListConnection;
         public DMPModInterface dmpModInterface;
         //Profiler state
         public Profiler profiler;
@@ -133,26 +124,18 @@ namespace DarkMultiPlayer
             kspTime = profiler.GetCurrentTime;
             kspMemory = profiler.GetCurrentMemory;
 
-            dmpSettings = new Settings();
-            toolbarSupport = new ToolbarSupport(dmpSettings);
-            universeSyncCache = new UniverseSyncCache(dmpSettings);
-            modWindow = new ModWindow();
-            modWorker = new ModWorker(modWindow);
-            modWindow.SetDependenices(modWorker);
-            universeConverter = new UniverseConverter(dmpSettings);
+            Settings.singleton = new Settings();
+
+            toolbarSupport = new ToolbarSupport();
+            universeSyncCache = new UniverseSyncCache();
+            universeConverter = new UniverseConverter();
             universeConverterWindow = new UniverseConverterWindow(universeConverter);
-            serverListDisclaimerWindow = new ServerListDisclaimerWindow(dmpSettings);
-            optionsWindow = new OptionsWindow(dmpSettings, universeSyncCache, modWorker, universeConverterWindow, toolbarSupport, serverListDisclaimerWindow);
-            serverListConnection = new ServerListConnection(dmpSettings);
-            serversWindow = new ServersWindow(dmpSettings, optionsWindow, serverListConnection);
-            serverListConnection.SetDependancy(serversWindow);
-            connectionWindow = new ConnectionWindow(dmpSettings, optionsWindow, serversWindow, serverListDisclaimerWindow);
-            disclaimerWindow = new DisclaimerWindow(dmpSettings);
+            optionsWindow = new OptionsWindow(universeSyncCache, universeConverterWindow, toolbarSupport);
+            connectionWindow = new ConnectionWindow(optionsWindow);
+            disclaimerWindow = new DisclaimerWindow();
             dmpModInterface = new DMPModInterface();
-            //SafetyBubble.RegisterDefaultLocations();
 
-
-            if (dmpSettings.disclaimerAccepted != 1)
+            if (Settings.singleton.disclaimerAccepted != 1)
             {
                 modDisabled = true;
                 disclaimerWindow.SpawnDialog();
@@ -309,96 +292,42 @@ namespace DarkMultiPlayer
                     }
                 }
 
-                if (HighLogic.LoadedScene == GameScenes.SPACECENTER && PSystemSetup.Instance != null && Time.timeSinceLevelLoad > 1f)
-                {
-                    if (PSystemSetup.Instance.SpaceCenterFacilities.Length != facilitiesAdded)
-                    {
-                        facilitiesAdded = PSystemSetup.Instance.SpaceCenterFacilities.Length;
-                        foreach (PSystemSetup.SpaceCenterFacility spaceCenterFacility in PSystemSetup.Instance.SpaceCenterFacilities)
-                        {
-                            foreach (PSystemSetup.SpaceCenterFacility.SpawnPoint spawnPoint in spaceCenterFacility.spawnPoints)
-                            {
-                                if (spawnPoint.latitude != 0 && spawnPoint.longitude != 0 && spawnPoint.altitude != 0)
-                                {
-                                    DarkLog.Debug("Adding facility spawn point: " + spaceCenterFacility.name + ":" + spawnPoint.name);
-                                    SafetyBubble.RegisterLocation(spawnPoint.latitude, spawnPoint.longitude, spawnPoint.altitude, spaceCenterFacility.hostBody.name);
-                                    DarkLog.Debug("LLA: [" + spawnPoint.latitude + ", " + spawnPoint.longitude + ", " + spawnPoint.altitude + "]");
-                                }
-                            }
-                        }
-                    }
-                    if (PSystemSetup.Instance.LaunchSites.Count != modSitesAdded)
-                    {
-                        modSitesAdded = PSystemSetup.Instance.LaunchSites.Count;
-                        foreach (LaunchSite launchSite in PSystemSetup.Instance.LaunchSites)
-                        {
-                            foreach (LaunchSite.SpawnPoint spawnPoint in launchSite.spawnPoints)
-                            {
-                                if (spawnPoint.latitude != 0 && spawnPoint.longitude != 0 && spawnPoint.altitude != 0)
-                                {
-                                    DarkLog.Debug("Adding mod spawn point: " + launchSite.name + ":" + spawnPoint.name);
-                                    SafetyBubble.RegisterLocation(spawnPoint.latitude, spawnPoint.longitude, spawnPoint.altitude, launchSite.Body.name);
-                                    DarkLog.Debug("LLA: [" + spawnPoint.latitude + ", " + spawnPoint.longitude + ", " + spawnPoint.altitude + "]");
-                                }
-                            }
-                        }
-                    }
-                    if (PSystemSetup.Instance.StockLaunchSites.Length != stockSitesAdded)
-                    {
-                        stockSitesAdded = PSystemSetup.Instance.StockLaunchSites.Length;
-                        foreach (LaunchSite launchSite in PSystemSetup.Instance.StockLaunchSites)
-                        {
-                            foreach (LaunchSite.SpawnPoint spawnPoint in launchSite.spawnPoints)
-                            {
-                                if (spawnPoint.latitude != 0 && spawnPoint.longitude != 0 && spawnPoint.altitude != 0)
-                                {
-                                    DarkLog.Debug("Adding stock spawn point: " + launchSite.name + ":" + spawnPoint.name);
-                                    SafetyBubble.RegisterLocation(spawnPoint.latitude, spawnPoint.longitude, spawnPoint.altitude, launchSite.Body.name);
-                                    DarkLog.Debug("LLA: [" + spawnPoint.latitude + ", " + spawnPoint.longitude + ", " + spawnPoint.altitude + "]");
-                                }
-                            }
-                        }
-                    }
-                }
-
-
-
                 //Handle GUI events
 
                 if (!connectionWindow.renameEventHandled)
                 {
-                    dmpSettings.SaveSettings();
+                    DarkMultiPlayer.Settings.singleton.SaveSettings();
                     connectionWindow.renameEventHandled = true;
                 }
                 if (!connectionWindow.addEventHandled)
                 {
-                    dmpSettings.servers.Add(connectionWindow.addEntry);
+                    DarkMultiPlayer.Settings.singleton.servers.Add(connectionWindow.addEntry);
                     connectionWindow.addEntry = null;
-                    dmpSettings.SaveSettings();
+                    DarkMultiPlayer.Settings.singleton.SaveSettings();
                     connectionWindow.addingServer = false;
                     connectionWindow.addEventHandled = true;
                 }
                 if (!connectionWindow.editEventHandled)
                 {
-                    dmpSettings.servers[connectionWindow.selected].name = connectionWindow.editEntry.name;
-                    dmpSettings.servers[connectionWindow.selected].address = connectionWindow.editEntry.address;
-                    dmpSettings.servers[connectionWindow.selected].port = connectionWindow.editEntry.port;
+                    DarkMultiPlayer.Settings.singleton.servers[connectionWindow.selected].name = connectionWindow.editEntry.name;
+                    DarkMultiPlayer.Settings.singleton.servers[connectionWindow.selected].address = connectionWindow.editEntry.address;
+                    DarkMultiPlayer.Settings.singleton.servers[connectionWindow.selected].port = connectionWindow.editEntry.port;
                     connectionWindow.editEntry = null;
-                    dmpSettings.SaveSettings();
+                    DarkMultiPlayer.Settings.singleton.SaveSettings();
                     connectionWindow.addingServer = false;
                     connectionWindow.editEventHandled = true;
                 }
                 if (!connectionWindow.removeEventHandled)
                 {
-                    dmpSettings.servers.RemoveAt(connectionWindow.selected);
+                    DarkMultiPlayer.Settings.singleton.servers.RemoveAt(connectionWindow.selected);
                     connectionWindow.selected = -1;
-                    dmpSettings.SaveSettings();
+                    DarkMultiPlayer.Settings.singleton.SaveSettings();
                     connectionWindow.removeEventHandled = true;
                 }
                 if (!connectionWindow.connectEventHandled)
                 {
                     connectionWindow.connectEventHandled = true;
-                    ConnectToServer(dmpSettings.servers[connectionWindow.selected].address, dmpSettings.servers[connectionWindow.selected].port);
+                    ConnectToServer(DarkMultiPlayer.Settings.singleton.servers[connectionWindow.selected].address, DarkMultiPlayer.Settings.singleton.servers[connectionWindow.selected].port);
                 }
                 if (commandLineConnect != null && HighLogic.LoadedScene == GameScenes.MAINMENU && Time.timeSinceLevelLoad > 1f)
                 {
@@ -425,9 +354,6 @@ namespace DarkMultiPlayer
                 }
 
                 connectionWindow.Update();
-                serverListConnection.Update();
-                serversWindow.Update();
-                modWindow.Update();
                 optionsWindow.Update();
                 universeConverterWindow.Update();
                 profiler.Update();
@@ -506,17 +432,11 @@ namespace DarkMultiPlayer
                         dmpGame.networkWorker.SendDisconnect("Quit");
                     }
 
-                    if (dmpGame.screenshotWorker.uploadScreenshot)
-                    {
-                        dmpGame.screenshotWorker.uploadScreenshot = false;
-                        StartCoroutine(UploadScreenshot());
-                    }
-
-                    if (HighLogic.CurrentGame.flagURL != dmpSettings.selectedFlag)
+                    if (HighLogic.CurrentGame.flagURL != DarkMultiPlayer.Settings.singleton.selectedFlag)
                     {
                         DarkLog.Debug("Saving selected flag");
-                        dmpSettings.selectedFlag = HighLogic.CurrentGame.flagURL;
-                        dmpSettings.SaveSettings();
+                        DarkMultiPlayer.Settings.singleton.selectedFlag = HighLogic.CurrentGame.flagURL;
+                        DarkMultiPlayer.Settings.singleton.SaveSettings();
                         dmpGame.flagSyncer.flagChangeEvent = true;
                     }
 
@@ -548,7 +468,7 @@ namespace DarkMultiPlayer
 
                     if (HighLogic.LoadedScene == GameScenes.FLIGHT && FlightGlobals.ready)
                     {
-                        HighLogic.CurrentGame.Parameters.Flight.CanLeaveToSpaceCenter = !dmpGame.vesselWorker.isSpectating && dmpSettings.revertEnabled || (PauseMenu.canSaveAndExit == ClearToSaveStatus.CLEAR);
+                        HighLogic.CurrentGame.Parameters.Flight.CanLeaveToSpaceCenter = DarkMultiPlayer.Settings.singleton.revertEnabled || (PauseMenu.canSaveAndExit == ClearToSaveStatus.CLEAR);
                     }
                     else
                     {
@@ -599,20 +519,10 @@ namespace DarkMultiPlayer
 
         public void ConnectToServer(string address, int port)
         {
-            dmpGame = new DMPGame(dmpSettings, universeSyncCache, modWorker, connectionWindow, dmpModInterface, toolbarSupport, optionsWindow, profiler);
+            dmpGame = new DMPGame(universeSyncCache, connectionWindow, dmpModInterface, toolbarSupport, optionsWindow, profiler);
             dmpGame.networkWorker.ConnectToServer(address, port);
         }
 
-
-        public IEnumerator<WaitForEndOfFrame> UploadScreenshot()
-        {
-            yield return new WaitForEndOfFrame();
-            if (dmpGame != null)
-            {
-                dmpGame.screenshotWorker.SendScreenshot();
-                dmpGame.screenshotWorker.screenshotTaken = true;
-            }
-        }
 
         public void TimingManagerFixedUpdate()
         {
@@ -676,12 +586,7 @@ namespace DarkMultiPlayer
             //Window ID's - Doesn't include "random" offset.
             //Connection window: 6702
             //Status window: 6703
-            //Chat window: 6704
             //Debug window: 6705
-            //Mod windw: 6706
-            //Craft library window: 6707
-            //Craft upload window: 6708
-            //Screenshot window: 6710
             //Options window: 6711
             //Converter window: 6712
             //Disclaimer window: 6713
@@ -691,17 +596,9 @@ namespace DarkMultiPlayer
                 {
                     connectionWindow.Draw();
                 }
-                if (modWindow != null)
-                {
-                    modWindow.Draw();
-                }
                 if (optionsWindow != null)
                 {
                     optionsWindow.Draw();
-                }
-                if (serversWindow != null)
-                {
-                    serversWindow.Draw();
                 }
                 if (universeConverterWindow != null)
                 {
@@ -765,7 +662,6 @@ namespace DarkMultiPlayer
             //.Start() seems to stupidly .Load() somewhere - Let's overwrite it so it loads correctly.
             GamePersistence.SaveGame(HighLogic.CurrentGame, "persistent", HighLogic.SaveFolder, SaveMode.OVERWRITE);
             HighLogic.CurrentGame.Start();
-            dmpGame.chatWorker.display = true;
             DarkLog.Debug("Started!");
         }
 
@@ -852,7 +748,7 @@ namespace DarkMultiPlayer
 
             //DMP stuff
             returnGame.startScene = GameScenes.SPACECENTER;
-            returnGame.flagURL = dmpSettings.selectedFlag;
+            returnGame.flagURL = DarkMultiPlayer.Settings.singleton.selectedFlag;
             returnGame.Title = "DarkMultiPlayer";
             // Disable everything if we're in main menu
             // I'm not sure why we need to create a blank game when we're not connected

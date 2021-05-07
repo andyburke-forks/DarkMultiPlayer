@@ -6,12 +6,6 @@ All DMP messages are built without a MessageWriter header, it gets added during 
 ===Shared format===
 HEARTBEAT: null - Just sends some data over the wire to keep the connection alive.
 
-CHAT_MESSAGE:
-int - chat message type (CHANNEL/PRIVATE)
-string - senders name
-string - CHANNEL: Channel, PRIVATE: PM player
-string - message.
-
 PLAYER_STATUS:
 string - player name
 string - vessel name

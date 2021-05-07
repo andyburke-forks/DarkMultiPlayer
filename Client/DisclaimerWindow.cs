@@ -6,11 +6,9 @@ namespace DarkMultiPlayer
     // This disclaimer exists because I was contacted by a moderator pointing me to the addon posting rules.
     public class DisclaimerWindow
     {
-        private Settings dmpSettings;
 
-        public DisclaimerWindow(Settings dmpSettings)
+        public DisclaimerWindow()
         {
-            this.dmpSettings = dmpSettings;
         }
 
         public void SpawnDialog()
@@ -37,8 +35,8 @@ namespace DarkMultiPlayer
                                 delegate
                                 {
                                     DarkLog.Debug("User accepted disclaimer, enabling DarkMultiPlayer");
-                                    dmpSettings.disclaimerAccepted = 1;
-                                    dmpSettings.SaveSettings();
+                                    Settings.singleton.disclaimerAccepted = 1;
+                                    Settings.singleton.SaveSettings();
                                     Client.modDisabled = false;
                                 }
                             ),

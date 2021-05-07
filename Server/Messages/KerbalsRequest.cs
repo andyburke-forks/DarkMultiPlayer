@@ -25,10 +25,6 @@ namespace DarkMultiPlayerServer.Messages
             Messages.PlayerStatus.SendAllPlayerStatus(client);
             Messages.ScenarioData.SendScenarioModules(client);
             Messages.WarpControl.SendAllReportedSkewRates(client);
-            Messages.CraftLibrary.SendCraftList(client);
-            Messages.Chat.SendPlayerChatChannels(client);
-            Messages.LockSystem.SendAllLocks(client);
-            Messages.AdminSystem.SendAllAdmins(client);
             //Send kerbals
             lock (Server.universeSizeLock)
             {

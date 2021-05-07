@@ -24,11 +24,9 @@ namespace DarkMultiPlayerServer.Messages
                 mw.Write<int>(numberOfKerbals);
                 mw.Write<int>(numberOfVessels);
                 //mw.Write<int>(numberOfScenarioModules);
-                mw.Write<int>(Settings.settingsStore.screenshotHeight);
                 mw.Write<int>(Settings.settingsStore.numberOfAsteroids);
                 mw.Write<string>(Settings.settingsStore.consoleIdentifier);
                 mw.Write<int>((int)Settings.settingsStore.gameDifficulty);
-                mw.Write<float>(Settings.settingsStore.safetyBubbleDistance);
 
                 if (Settings.settingsStore.gameDifficulty == GameDifficulty.CUSTOM)
                 {

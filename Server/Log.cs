@@ -13,7 +13,6 @@ namespace DarkMultiPlayerServer
         {
             DEBUG,
             INFO,
-            CHAT,
             ERROR,
             FATAL
         }
@@ -39,7 +38,6 @@ namespace DarkMultiPlayerServer
                 if (sendToConsole)
                 {
                     Console.WriteLine(output);
-                    Messages.Chat.SendConsoleMessageToAdmins(output);
                 }
                 try
                 {
@@ -86,13 +84,6 @@ namespace DarkMultiPlayerServer
         {
             Console.ForegroundColor = ConsoleColor.Red;
             WriteLog(LogLevels.FATAL, message, true);
-            Console.ForegroundColor = ConsoleColor.Gray;
-        }
-
-        public static void ChatMessage(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            WriteLog(LogLevels.CHAT, message, true);
             Console.ForegroundColor = ConsoleColor.Gray;
         }
     }

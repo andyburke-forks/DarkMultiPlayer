@@ -15,11 +15,9 @@ namespace DarkMultiPlayer
         private ApplicationLauncherButton stockDmpButton;
         private IButton blizzyButton;
         //Services
-        private Settings dmpSettings;
 
-        public ToolbarSupport(Settings dmpSettings)
+        public ToolbarSupport()
         {
-            this.dmpSettings = dmpSettings;
         }
 
         public void DetectSettingsChange()
@@ -40,15 +38,15 @@ namespace DarkMultiPlayer
                 return;
             }
             registered = true;
-            if (dmpSettings.toolbarType == DMPToolbarType.DISABLED)
+            if (Settings.singleton.toolbarType == DMPToolbarType.DISABLED)
             {
                 //Nothing!
             }
-            if (dmpSettings.toolbarType == DMPToolbarType.FORCE_STOCK)
+            if (Settings.singleton.toolbarType == DMPToolbarType.FORCE_STOCK)
             {
                 EnableStockToolbar();
             }
-            if (dmpSettings.toolbarType == DMPToolbarType.BLIZZY_IF_INSTALLED)
+            if (Settings.singleton.toolbarType == DMPToolbarType.BLIZZY_IF_INSTALLED)
             {
                 if (ToolbarManager.ToolbarAvailable)
                 {
@@ -59,7 +57,7 @@ namespace DarkMultiPlayer
                     EnableStockToolbar();
                 }
             }
-            if (dmpSettings.toolbarType == DMPToolbarType.BOTH_IF_INSTALLED)
+            if (Settings.singleton.toolbarType == DMPToolbarType.BOTH_IF_INSTALLED)
             {
                 if (ToolbarManager.ToolbarAvailable)
                 {
