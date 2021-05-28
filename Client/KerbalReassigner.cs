@@ -56,7 +56,7 @@ namespace DarkMultiPlayer
                         DarkLog.Debug("Warning, kerbal double take on " + vessel.id + " ( " + vessel.name + " )");
                     }
                     kerbalToVessel[pcm.name] = vessel.id;
-                    DarkLog.Debug("OVC " + pcm.name + " belongs to " + vessel.id);
+                    DarkLog.Debug("OnVesselCreate: " + pcm.name + " belongs to " + (vessel.name ?? "unknown vessel") + " (" + vessel.id + ")");
                 }
             }
         }

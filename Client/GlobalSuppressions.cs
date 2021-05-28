@@ -4,6 +4,7 @@
 // Project-level suppressions either have no target or are given 
 // a specific target and scoped to a namespace, type, member, etc.
 
+/*
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Potential Code Quality Issues", "RECS0018:Comparison of floating point numbers with equality operator", Justification = "<Pending>", Scope = "member", Target = "~M:DarkMultiPlayer.WarpWorker.SubpaceDisplayEntrySorter(DarkMultiPlayer.SubspaceDisplayEntry,DarkMultiPlayer.SubspaceDisplayEntry)~System.Int32")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Potential Code Quality Issues", "RECS0018:Comparison of floating point numbers with equality operator", Justification = "<Pending>", Scope = "member", Target = "~M:DarkMultiPlayer.WarpWorker.SubspaceComparer(System.Int32,System.Int32)~System.Int32")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Potential Code Quality Issues", "RECS0082:Parameter has the same name as a member and hides it", Justification = "<Pending>", Scope = "member", Target = "~M:DarkMultiPlayer.WarpWorker.HandleReplyVote(System.Int32,System.Int32)")]
@@ -24,3 +25,4 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~M:DarkMultiPlayer.Button.mouseLeft(System.Object)")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Potential Code Quality Issues", "RECS0082:Parameter has the same name as a member and hides it", Justification = "<Pending>", Scope = "member", Target = "~M:DarkMultiPlayer.Button.detachEventHandler(System.Reflection.EventInfo,System.Delegate,System.Object)")]
 
+*/

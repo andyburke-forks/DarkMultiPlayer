@@ -21,13 +21,13 @@ namespace DarkMultiPlayer
             message = string.Format("[{0}] {1}", Client.realtimeSinceStartup, message);
             if (System.Threading.Thread.CurrentThread.ManagedThreadId == mainThreadID)
             {
-                UnityEngine.Debug.Log("DarkMultiPlayer: " + message);
+                UnityEngine.Debug.Log("[DarkMultiPlayer] " + message);
             }
             else
             {
                 lock (messageQueue)
                 {
-                    messageQueue.Enqueue("DarkMultiPlayer: [THREAD] " + message);
+                    messageQueue.Enqueue("[DarkMultiPlayer] [THREAD] " + message);
                 }
             }
         }

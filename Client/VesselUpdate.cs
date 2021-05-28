@@ -180,11 +180,16 @@ namespace DarkMultiPlayer
                 return;
             }
 
-            //Ignore updates to our own vessel if we are in flight and we aren't spectating
-            // if (!vesselWorker.isSpectating && (FlightGlobals.fetch.activeVessel != null ? FlightGlobals.fetch.activeVessel.id == vesselID : false) && HighLogic.LoadedScene == GameScenes.FLIGHT)
-            // {
-            //     return;
-            // }
+            bool is_active_vessel = FlightGlobals.fetch.activeVessel?.id == vesselID;
+            bool is_our_vessel = Store.singleton.get("position-updater-" + vesselID) == Settings.singleton.playerName;
+            bool is_in_flight = HighLogic.LoadedScene == GameScenes.FLIGHT;
+
+            // don't listen to updates about the vessel if we are the position updater
+            if ( is_active_vessel && is_in_flight && is_our_vessel)
+            {
+                return;
+            }
+
             Vessel updateVessel = FlightGlobals.fetch.vessels.FindLast(v => v.id == vesselID);
             if (updateVessel == null)
             {
